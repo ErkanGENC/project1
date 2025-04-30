@@ -34,3 +34,15 @@ C:\Users\gence\OneDrive\Masaüstü\project\FullstackWithFlutter\FullstackWithFlu
 C:\Users\gence\OneDrive\Masaüstü\project\FullstackWithFlutter\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\refint\FullstackWithFlutter.Core.dll
 C:\Users\gence\OneDrive\Masaüstü\project\FullstackWithFlutter\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.pdb
 C:\Users\gence\OneDrive\Masaüstü\project\FullstackWithFlutter\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\ref\FullstackWithFlutter.Core.dll
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\bin\Debug\net8.0\FullstackWithFlutter.Core.deps.json
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\bin\Debug\net8.0\FullstackWithFlutter.Core.dll
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\bin\Debug\net8.0\FullstackWithFlutter.Core.pdb
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.AssemblyInfoInputs.cache
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.AssemblyInfo.cs
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.csproj.CoreCompileInputs.cache
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.sourcelink.json
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.dll
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\refint\FullstackWithFlutter.Core.dll
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\FullstackWithFlutter.Core.pdb
+C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter.Core\obj\Debug\net8.0\ref\FullstackWithFlutter.Core.dll

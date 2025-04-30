@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "B/VQfvoRokM=",
+  "dgSpecHash": "SggpQ1LdawQ=",
   "success": true,
-  "projectFilePath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project\\FullstackWithFlutter\\FullstackWithFlutter\\FullstackWithFlutter\\FullstackWithFlutter.csproj",
+  "projectFilePath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project1\\FullstackWithFlutter\\FullstackWithFlutter\\FullstackWithFlutter.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\gence\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\gence\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",

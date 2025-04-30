@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "OY90FBkbTn0=",
+  "dgSpecHash": "72mU6fRvKKk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project\\FullstackWithFlutter\\FullstackWithFlutter\\FullstackWithFlutter.Core\\FullstackWithFlutter.Core.csproj",
+  "projectFilePath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project1\\FullstackWithFlutter\\FullstackWithFlutter.Core\\FullstackWithFlutter.Core.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\gence\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
     "C:\\Users\\gence\\.nuget\\packages\\microsoft.netcore.targets\\1.1.0\\microsoft.netcore.targets.1.1.0.nupkg.sha512",

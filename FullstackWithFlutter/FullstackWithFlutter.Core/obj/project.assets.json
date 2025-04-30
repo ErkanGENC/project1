@@ -1699,11 +1699,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project\\FullstackWithFlutter\\FullstackWithFlutter\\FullstackWithFlutter.Core\\FullstackWithFlutter.Core.csproj",
+      "projectUniqueName": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project1\\FullstackWithFlutter\\FullstackWithFlutter.Core\\FullstackWithFlutter.Core.csproj",
       "projectName": "FullstackWithFlutter.Core",
-      "projectPath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project\\FullstackWithFlutter\\FullstackWithFlutter\\FullstackWithFlutter.Core\\FullstackWithFlutter.Core.csproj",
+      "projectPath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project1\\FullstackWithFlutter\\FullstackWithFlutter.Core\\FullstackWithFlutter.Core.csproj",
       "packagesPath": "C:\\Users\\gence\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project\\FullstackWithFlutter\\FullstackWithFlutter\\FullstackWithFlutter.Core\\obj\\",
+      "outputPath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project1\\FullstackWithFlutter\\FullstackWithFlutter.Core\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
