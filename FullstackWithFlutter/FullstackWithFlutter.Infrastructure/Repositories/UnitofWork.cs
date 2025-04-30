@@ -5,16 +5,21 @@ namespace FullstackWithFlutter.Infrastructure.Repositories
     public class UnitofWork:IUnitofWork
     {
         private readonly ApplicationDbContext _dbContext;
-       
 
         public IAppUserRepository AppUsers { get; }
+        public IDoctorRepository Doctors { get; }
+        public IAppointmentRepository Appointments { get; }
 
-        
-
-        public UnitofWork(ApplicationDbContext applicationDbContext,IAppUserRepository appUserRepository)
+        public UnitofWork(
+            ApplicationDbContext applicationDbContext,
+            IAppUserRepository appUserRepository,
+            IDoctorRepository doctorRepository,
+            IAppointmentRepository appointmentRepository)
         {
             _dbContext = applicationDbContext;
             AppUsers = appUserRepository;
+            Doctors = doctorRepository;
+            Appointments = appointmentRepository;
         }
 
         public int Complete()

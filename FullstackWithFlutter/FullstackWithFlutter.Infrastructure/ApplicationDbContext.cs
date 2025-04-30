@@ -15,6 +15,7 @@ namespace FullstackWithFlutter.Infrastructure
 
         }
         public DbSet<AppUser> appUsers { get; set; }
-
+        public DbSet<Doctor> doctors { get; set; }
+        public DbSet<Appointment> appointments { get; set; }
     }
 }

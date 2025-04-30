@@ -10,113 +10,46 @@ class ReportsPage extends StatefulWidget {
   _ReportsPageState createState() => _ReportsPageState();
 }
 
-class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStateMixin {
+class _ReportsPageState extends State<ReportsPage>
+    with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   String _errorMessage = '';
   Map<String, dynamic> _reportData = {};
   late TabController _tabController;
-  
-  final List<String> _reportTypes = ['Genel Bakış', 'Hasta İstatistikleri', 'Randevu İstatistikleri', 'Gelir Raporu'];
-  
+
+  final List<String> _reportTypes = [
+    'Genel Bakış',
+    'Hasta İstatistikleri',
+    'Randevu İstatistikleri',
+    'Gelir Raporu'
+  ];
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _reportTypes.length, vsync: this);
     _loadReportData();
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadReportData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
-    
+
     try {
-      // Gerçek uygulamada, burada API'den rapor verilerini alacaksınız
-      // Şimdilik örnek veriler kullanıyoruz
-      await Future.delayed(const Duration(seconds: 1)); // API çağrısı simülasyonu
-      
+      // API'den rapor verilerini al
+      final reportData = await _apiService.getReportData();
+
       setState(() {
-        _reportData = {
-          'patientStats': {
-            'totalPatients': 256,
-            'newPatients': 24,
-            'activePatients': 187,
-            'inactivePatients': 69,
-            'patientsByAge': [
-              {'age': '0-18', 'count': 45},
-              {'age': '19-30', 'count': 78},
-              {'age': '31-45', 'count': 92},
-              {'age': '46-60', 'count': 31},
-              {'age': '60+', 'count': 10},
-            ],
-            'patientsByGender': [
-              {'gender': 'Erkek', 'count': 118},
-              {'gender': 'Kadın', 'count': 138},
-            ],
-          },
-          'appointmentStats': {
-            'totalAppointments': 412,
-            'completedAppointments': 356,
-            'cancelledAppointments': 32,
-            'pendingAppointments': 24,
-            'appointmentsByMonth': [
-              {'month': 'Ocak', 'count': 32},
-              {'month': 'Şubat', 'count': 28},
-              {'month': 'Mart', 'count': 35},
-              {'month': 'Nisan', 'count': 42},
-              {'month': 'Mayıs', 'count': 38},
-              {'month': 'Haziran', 'count': 45},
-              {'month': 'Temmuz', 'count': 52},
-              {'month': 'Ağustos', 'count': 48},
-              {'month': 'Eylül', 'count': 40},
-              {'month': 'Ekim', 'count': 36},
-              {'month': 'Kasım', 'count': 30},
-              {'month': 'Aralık', 'count': 28},
-            ],
-            'appointmentsByType': [
-              {'type': 'Diş Kontrolü', 'count': 156},
-              {'type': 'Dolgu', 'count': 98},
-              {'type': 'Kanal Tedavisi', 'count': 45},
-              {'type': 'Diş Çekimi', 'count': 32},
-              {'type': 'Diş Beyazlatma', 'count': 28},
-              {'type': 'Diğer', 'count': 53},
-            ],
-          },
-          'revenueStats': {
-            'totalRevenue': 145750,
-            'pendingPayments': 12500,
-            'revenueByMonth': [
-              {'month': 'Ocak', 'amount': 10250},
-              {'month': 'Şubat', 'amount': 9800},
-              {'month': 'Mart', 'amount': 11500},
-              {'month': 'Nisan', 'amount': 12750},
-              {'month': 'Mayıs', 'amount': 11800},
-              {'month': 'Haziran', 'amount': 13500},
-              {'month': 'Temmuz', 'amount': 15200},
-              {'month': 'Ağustos', 'amount': 14800},
-              {'month': 'Eylül', 'amount': 12500},
-              {'month': 'Ekim', 'amount': 11200},
-              {'month': 'Kasım', 'amount': 10800},
-              {'month': 'Aralık', 'amount': 9650},
-            ],
-            'revenueByService': [
-              {'service': 'Diş Kontrolü', 'amount': 31250},
-              {'service': 'Dolgu', 'amount': 29400},
-              {'service': 'Kanal Tedavisi', 'amount': 22500},
-              {'service': 'Diş Çekimi', 'amount': 16000},
-              {'service': 'Diş Beyazlatma', 'amount': 14000},
-              {'service': 'Diğer', 'amount': 32600},
-            ],
-          },
-        };
+        _reportData = reportData;
         _isLoading = false;
       });
     } catch (e) {
@@ -190,7 +123,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
     );
   }
-  
+
   Widget _buildOverviewTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -205,14 +138,15 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 24),
-          
+
           // Özet kartları
           Row(
             children: [
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Toplam Hasta',
-                  value: _reportData['patientStats']['totalPatients'].toString(),
+                  value:
+                      _reportData['patientStats']['totalPatients'].toString(),
                   icon: Icons.people,
                   color: AppTheme.primaryColor,
                 ),
@@ -221,7 +155,8 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Toplam Randevu',
-                  value: _reportData['appointmentStats']['totalAppointments'].toString(),
+                  value: _reportData['appointmentStats']['totalAppointments']
+                      .toString(),
                   icon: Icons.calendar_today,
                   color: AppTheme.accentColor,
                 ),
@@ -250,7 +185,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               ),
             ],
           ),
-          
+
           const SizedBox(height: 32),
           Text(
             'Hasta Dağılımı',
@@ -260,7 +195,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Hasta dağılımı grafiği
           ChartCard(
             title: 'Yaş Gruplarına Göre Hastalar',
@@ -269,7 +204,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
             yKey: 'count',
             color: AppTheme.primaryColor,
           ),
-          
+
           const SizedBox(height: 24),
           Text(
             'Randevu Dağılımı',
@@ -279,7 +214,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Randevu dağılımı grafiği
           ChartCard(
             title: 'Aylara Göre Randevular',
@@ -288,7 +223,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
             yKey: 'count',
             color: AppTheme.accentColor,
           ),
-          
+
           const SizedBox(height: 24),
           Text(
             'Gelir Dağılımı',
@@ -298,7 +233,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Gelir dağılımı grafiği
           ChartCard(
             title: 'Aylara Göre Gelir',
@@ -312,7 +247,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   Widget _buildPatientStatsTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -327,14 +262,15 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 24),
-          
+
           // Özet kartları
           Row(
             children: [
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Toplam Hasta',
-                  value: _reportData['patientStats']['totalPatients'].toString(),
+                  value:
+                      _reportData['patientStats']['totalPatients'].toString(),
                   icon: Icons.people,
                   color: AppTheme.primaryColor,
                 ),
@@ -356,7 +292,8 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Aktif Hastalar',
-                  value: _reportData['patientStats']['activePatients'].toString(),
+                  value:
+                      _reportData['patientStats']['activePatients'].toString(),
                   icon: Icons.person,
                   color: Colors.green,
                 ),
@@ -365,14 +302,15 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Pasif Hastalar',
-                  value: _reportData['patientStats']['inactivePatients'].toString(),
+                  value: _reportData['patientStats']['inactivePatients']
+                      .toString(),
                   icon: Icons.person_off,
                   color: Colors.grey,
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 32),
           Text(
             'Hasta Dağılımı',
@@ -382,7 +320,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Yaş gruplarına göre hasta dağılımı
           ChartCard(
             title: 'Yaş Gruplarına Göre Hastalar',
@@ -391,9 +329,9 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
             yKey: 'count',
             color: AppTheme.primaryColor,
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Cinsiyete göre hasta dağılımı
           ChartCard(
             title: 'Cinsiyete Göre Hastalar',
@@ -407,7 +345,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   Widget _buildAppointmentStatsTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -422,14 +360,15 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 24),
-          
+
           // Özet kartları
           Row(
             children: [
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Toplam Randevu',
-                  value: _reportData['appointmentStats']['totalAppointments'].toString(),
+                  value: _reportData['appointmentStats']['totalAppointments']
+                      .toString(),
                   icon: Icons.calendar_today,
                   color: AppTheme.accentColor,
                 ),
@@ -438,7 +377,9 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Tamamlanan',
-                  value: _reportData['appointmentStats']['completedAppointments'].toString(),
+                  value: _reportData['appointmentStats']
+                          ['completedAppointments']
+                      .toString(),
                   icon: Icons.check_circle,
                   color: Colors.green,
                 ),
@@ -451,7 +392,9 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               Expanded(
                 child: _buildSummaryCard(
                   title: 'İptal Edilen',
-                  value: _reportData['appointmentStats']['cancelledAppointments'].toString(),
+                  value: _reportData['appointmentStats']
+                          ['cancelledAppointments']
+                      .toString(),
                   icon: Icons.cancel,
                   color: Colors.red,
                 ),
@@ -460,14 +403,15 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               Expanded(
                 child: _buildSummaryCard(
                   title: 'Bekleyen',
-                  value: _reportData['appointmentStats']['pendingAppointments'].toString(),
+                  value: _reportData['appointmentStats']['pendingAppointments']
+                      .toString(),
                   icon: Icons.pending_actions,
                   color: Colors.orange,
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 32),
           Text(
             'Randevu Dağılımı',
@@ -477,7 +421,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Aylara göre randevu dağılımı
           ChartCard(
             title: 'Aylara Göre Randevular',
@@ -486,9 +430,9 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
             yKey: 'count',
             color: AppTheme.accentColor,
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Türlere göre randevu dağılımı
           ChartCard(
             title: 'Türlere Göre Randevular',
@@ -502,7 +446,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   Widget _buildRevenueStatsTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -517,7 +461,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 24),
-          
+
           // Özet kartları
           Row(
             children: [
@@ -540,7 +484,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
               ),
             ],
           ),
-          
+
           const SizedBox(height: 32),
           Text(
             'Gelir Dağılımı',
@@ -550,7 +494,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Aylara göre gelir dağılımı
           ChartCard(
             title: 'Aylara Göre Gelir',
@@ -560,9 +504,9 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
             color: Colors.green,
             isCurrency: true,
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Hizmetlere göre gelir dağılımı
           ChartCard(
             title: 'Hizmetlere Göre Gelir',
@@ -577,7 +521,7 @@ class _ReportsPageState extends State<ReportsPage> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   Widget _buildSummaryCard({
     required String title,
     required String value,

@@ -37,6 +37,9 @@ public class Program
         builder.Services.AddAutoMapper(typeof(Program));
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IDoctorService, DoctorService>();
+        builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+        builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddEndpointsApiExplorer();
 
         // Add logging

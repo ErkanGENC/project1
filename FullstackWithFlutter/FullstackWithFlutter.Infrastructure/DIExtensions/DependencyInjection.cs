@@ -12,6 +12,8 @@ namespace FullstackWithFlutter.Infrastructure.DIExtensions
         public static IServiceCollection AddRepositories(this IServiceCollection services,IConfiguration configuration)
         {
             services.AddScoped<IAppUserRepository, AppUserRepository>();
+            services.AddScoped<IDoctorRepository, DoctorRepository>();
+            services.AddScoped<IAppointmentRepository, AppointmentRepository>();
             services.AddScoped<IUnitofWork, UnitofWork>();
             services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 

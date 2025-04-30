@@ -8,8 +8,9 @@ namespace FullstackWithFlutter.Core.Interfaces
 {
     public interface IUnitofWork:IDisposable
     {
-     
         IAppUserRepository AppUsers { get; }
+        IDoctorRepository Doctors { get; }
+        IAppointmentRepository Appointments { get; }
         int Complete();
     }
 }

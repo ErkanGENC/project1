@@ -1,26 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../services/api_service.dart';
-
-class Appointment {
-  final int id;
-  final String patientName;
-  final String doctorName;
-  final DateTime date;
-  final String time;
-  final String status;
-  final String type;
-
-  Appointment({
-    required this.id,
-    required this.patientName,
-    required this.doctorName,
-    required this.date,
-    required this.time,
-    required this.status,
-    required this.type,
-  });
-}
+import '../../models/appointment_model.dart';
 
 class AppointmentsManagement extends StatefulWidget {
   const AppointmentsManagement({Key? key}) : super(key: key);
@@ -29,7 +10,8 @@ class AppointmentsManagement extends StatefulWidget {
   _AppointmentsManagementState createState() => _AppointmentsManagementState();
 }
 
-class _AppointmentsManagementState extends State<AppointmentsManagement> with SingleTickerProviderStateMixin {
+class _AppointmentsManagementState extends State<AppointmentsManagement>
+    with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   List<Appointment> _appointments = [];
   List<Appointment> _filteredAppointments = [];
@@ -37,10 +19,16 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
   String _errorMessage = '';
   String _searchQuery = '';
   late TabController _tabController;
-  
-  final List<String> _statusFilters = ['Tümü', 'Bekleyen', 'Onaylandı', 'İptal Edildi', 'Tamamlandı'];
+
+  final List<String> _statusFilters = [
+    'Tümü',
+    'Bekleyen',
+    'Onaylandı',
+    'İptal Edildi',
+    'Tamamlandı'
+  ];
   String _selectedStatus = 'Tümü';
-  
+
   @override
   void initState() {
     super.initState();
@@ -48,13 +36,13 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
     _tabController.addListener(_handleTabSelection);
     _fetchAppointments();
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
+
   void _handleTabSelection() {
     if (_tabController.indexIsChanging) {
       setState(() {
@@ -63,66 +51,17 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
       });
     }
   }
-  
+
   Future<void> _fetchAppointments() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
-    
+
     try {
-      // Gerçek uygulamada, burada API'den randevuları alacaksınız
-      // Şimdilik örnek veriler kullanıyoruz
-      await Future.delayed(const Duration(seconds: 1)); // API çağrısı simülasyonu
-      
-      final List<Appointment> appointments = [
-        Appointment(
-          id: 1,
-          patientName: 'Ahmet Yılmaz',
-          doctorName: 'Dr. Mehmet Öz',
-          date: DateTime.now().add(const Duration(days: 1)),
-          time: '09:30',
-          status: 'Bekleyen',
-          type: 'Diş Kontrolü',
-        ),
-        Appointment(
-          id: 2,
-          patientName: 'Ayşe Demir',
-          doctorName: 'Dr. Zeynep Kaya',
-          date: DateTime.now().add(const Duration(days: 2)),
-          time: '10:15',
-          status: 'Onaylandı',
-          type: 'Kanal Tedavisi',
-        ),
-        Appointment(
-          id: 3,
-          patientName: 'Mehmet Kaya',
-          doctorName: 'Dr. Ali Yıldız',
-          date: DateTime.now().subtract(const Duration(days: 1)),
-          time: '14:00',
-          status: 'Tamamlandı',
-          type: 'Diş Çekimi',
-        ),
-        Appointment(
-          id: 4,
-          patientName: 'Zeynep Şahin',
-          doctorName: 'Dr. Mehmet Öz',
-          date: DateTime.now().add(const Duration(days: 3)),
-          time: '11:30',
-          status: 'İptal Edildi',
-          type: 'Diş Kontrolü',
-        ),
-        Appointment(
-          id: 5,
-          patientName: 'Ali Yıldız',
-          doctorName: 'Dr. Zeynep Kaya',
-          date: DateTime.now(),
-          time: '16:45',
-          status: 'Bekleyen',
-          type: 'Dolgu',
-        ),
-      ];
-      
+      // API'den randevuları al
+      final appointments = await _apiService.getAllAppointments();
+
       setState(() {
         _appointments = appointments;
         _filterAppointments();
@@ -135,29 +74,34 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
       });
     }
   }
-  
+
   void _filterAppointments() {
     setState(() {
       if (_searchQuery.isEmpty && _selectedStatus == 'Tümü') {
         _filteredAppointments = _appointments;
         return;
       }
-      
+
       _filteredAppointments = _appointments.where((appointment) {
         // Durum filtreleme
-        final bool statusMatch = _selectedStatus == 'Tümü' || appointment.status == _selectedStatus;
-        
+        final bool statusMatch =
+            _selectedStatus == 'Tümü' || appointment.status == _selectedStatus;
+
         // Arama filtreleme
         final bool searchMatch = _searchQuery.isEmpty ||
-            appointment.patientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            appointment.doctorName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            appointment.patientName
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            appointment.doctorName
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
             appointment.type.toLowerCase().contains(_searchQuery.toLowerCase());
-        
+
         return statusMatch && searchMatch;
       }).toList();
     });
   }
-  
+
   void _showAddAppointmentDialog() {
     final _formKey = GlobalKey<FormState>();
     final _patientController = TextEditingController();
@@ -165,12 +109,24 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
     final _typeController = TextEditingController();
     DateTime _selectedDate = DateTime.now();
     String _selectedTime = '09:00';
-    
+
     final List<String> _timeSlots = [
-      '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-      '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'
+      '09:00',
+      '09:30',
+      '10:00',
+      '10:30',
+      '11:00',
+      '11:30',
+      '13:00',
+      '13:30',
+      '14:00',
+      '14:30',
+      '15:00',
+      '15:30',
+      '16:00',
+      '16:30'
     ];
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -276,12 +232,11 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
             child: const Text('İptal'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (_formKey.currentState!.validate()) {
-                // Gerçek uygulamada, burada API'ye yeni randevu eklemek için istek atılır
-                // Şimdilik sadece listeye ekliyoruz
+                // API'ye yeni randevu eklemek için istek at
                 final newAppointment = Appointment(
-                  id: _appointments.length + 1,
+                  id: 0, // API tarafında otomatik atanacak
                   patientName: _patientController.text,
                   doctorName: _doctorController.text,
                   date: _selectedDate,
@@ -289,20 +244,60 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
                   status: 'Bekleyen',
                   type: _typeController.text,
                 );
-                
-                setState(() {
-                  _appointments.add(newAppointment);
-                  _filterAppointments();
-                });
-                
-                Navigator.pop(context);
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Randevu başarıyla eklendi'),
-                    backgroundColor: Colors.green,
-                  ),
+
+                // Yükleniyor göstergesi
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (loadingContext) =>
+                      const Center(child: CircularProgressIndicator()),
                 );
+
+                try {
+                  // API'ye istek at
+                  final result =
+                      await _apiService.addAppointment(newAppointment);
+
+                  // Mounted kontrolü
+                  if (!mounted) return;
+
+                  // Yükleniyor göstergesini kapat
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Dialog'u kapat
+
+                  if (result['success']) {
+                    // Başarılı ise randevuları yeniden yükle
+                    _fetchAppointments();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result['message']),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    // Hata durumunda
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result['message']),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Hata durumunda
+                  if (!mounted) return;
+
+                  // Yükleniyor göstergesini kapat
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Bir hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Ekle'),
@@ -311,7 +306,7 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
       ),
     );
   }
-  
+
   void _showAppointmentDetailsDialog(Appointment appointment) {
     showDialog(
       context: context,
@@ -323,7 +318,8 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
           children: [
             _buildDetailRow('Hasta', appointment.patientName),
             _buildDetailRow('Doktor', appointment.doctorName),
-            _buildDetailRow('Tarih', '${appointment.date.day}/${appointment.date.month}/${appointment.date.year}'),
+            _buildDetailRow('Tarih',
+                '${appointment.date.day}/${appointment.date.month}/${appointment.date.year}'),
             _buildDetailRow('Saat', appointment.time),
             _buildDetailRow('Tür', appointment.type),
             _buildDetailRow('Durum', appointment.status),
@@ -339,7 +335,8 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
               onPressed: () {
                 // Gerçek uygulamada, burada API'ye randevu onaylamak için istek atılır
                 // Şimdilik sadece listeyi güncelliyoruz
-                final index = _appointments.indexWhere((a) => a.id == appointment.id);
+                final index =
+                    _appointments.indexWhere((a) => a.id == appointment.id);
                 if (index != -1) {
                   final updatedAppointment = Appointment(
                     id: appointment.id,
@@ -350,15 +347,15 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
                     status: 'Onaylandı',
                     type: appointment.type,
                   );
-                  
+
                   setState(() {
                     _appointments[index] = updatedAppointment;
                     _filterAppointments();
                   });
                 }
-                
+
                 Navigator.pop(context);
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Randevu onaylandı'),
@@ -368,12 +365,14 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
               },
               child: const Text('Onayla'),
             ),
-          if (appointment.status != 'İptal Edildi' && appointment.status != 'Tamamlandı')
+          if (appointment.status != 'İptal Edildi' &&
+              appointment.status != 'Tamamlandı')
             ElevatedButton(
               onPressed: () {
                 // Gerçek uygulamada, burada API'ye randevu iptal etmek için istek atılır
                 // Şimdilik sadece listeyi güncelliyoruz
-                final index = _appointments.indexWhere((a) => a.id == appointment.id);
+                final index =
+                    _appointments.indexWhere((a) => a.id == appointment.id);
                 if (index != -1) {
                   final updatedAppointment = Appointment(
                     id: appointment.id,
@@ -384,15 +383,15 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
                     status: 'İptal Edildi',
                     type: appointment.type,
                   );
-                  
+
                   setState(() {
                     _appointments[index] = updatedAppointment;
                     _filterAppointments();
                   });
                 }
-                
+
                 Navigator.pop(context);
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Randevu iptal edildi'),
@@ -407,7 +406,7 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
       ),
     );
   }
-  
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -477,13 +476,14 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
                   icon: const Icon(Icons.add),
                   label: const Text('Yeni Randevu'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           // Randevu listesi
           Expanded(
             child: _isLoading
@@ -527,10 +527,12 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
                             itemBuilder: (context, index) {
                               final appointment = _filteredAppointments[index];
                               return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
                                 child: ListTile(
                                   leading: CircleAvatar(
-                                    backgroundColor: _getStatusColor(appointment.status),
+                                    backgroundColor:
+                                        _getStatusColor(appointment.status),
                                     child: const Icon(
                                       Icons.calendar_today,
                                       color: Colors.white,
@@ -539,21 +541,29 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
                                   ),
                                   title: Text(appointment.patientName),
                                   subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('${appointment.date.day}/${appointment.date.month}/${appointment.date.year} - ${appointment.time}'),
-                                      Text('${appointment.type} - ${appointment.doctorName}'),
+                                      Text(
+                                          '${appointment.date.day}/${appointment.date.month}/${appointment.date.year} - ${appointment.time}'),
+                                      Text(
+                                          '${appointment.type} - ${appointment.doctorName}'),
                                       Container(
                                         margin: const EdgeInsets.only(top: 4),
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: _getStatusColor(appointment.status).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
+                                          color: _getStatusColor(
+                                                  appointment.status)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                         child: Text(
                                           appointment.status,
                                           style: TextStyle(
-                                            color: _getStatusColor(appointment.status),
+                                            color: _getStatusColor(
+                                                appointment.status),
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -563,10 +573,13 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
                                   ),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.info_outline),
-                                    onPressed: () => _showAppointmentDetailsDialog(appointment),
+                                    onPressed: () =>
+                                        _showAppointmentDetailsDialog(
+                                            appointment),
                                     tooltip: 'Detaylar',
                                   ),
-                                  onTap: () => _showAppointmentDetailsDialog(appointment),
+                                  onTap: () => _showAppointmentDetailsDialog(
+                                      appointment),
                                 ),
                               );
                             },
@@ -576,7 +589,7 @@ class _AppointmentsManagementState extends State<AppointmentsManagement> with Si
       ),
     );
   }
-  
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Bekleyen':
