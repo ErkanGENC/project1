@@ -97,6 +97,15 @@ namespace FullstackWithFlutter.Services
                     user.FullName = userViewModel.FullName;
                     user.Email = userViewModel.Email;
                     user.MobileNumber = userViewModel.MobileNumber;
+
+                    // Doktor bilgilerini güncelle
+                    if (userViewModel.DoctorId.HasValue)
+                    {
+                        user.DoctorId = userViewModel.DoctorId;
+                        user.DoctorName = userViewModel.DoctorName;
+                        user.Specialization = userViewModel.Specialization;
+                    }
+
                     user.UpdatedDate = DateTime.Now;
                     user.UpdatedBy = "API";
                     _unitofWork.AppUsers.Update(user);

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FullstackWithFlutter")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cf11a10892581aaae0c1658007a95d75d33954b9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+74900561b9a34ceee8cd1dbb8c70608fc838ce5d")]
 [assembly: System.Reflection.AssemblyProductAttribute("FullstackWithFlutter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FullstackWithFlutter")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

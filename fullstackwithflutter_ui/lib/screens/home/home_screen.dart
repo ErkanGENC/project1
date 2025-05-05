@@ -27,7 +27,8 @@ class _HomeScreenState extends State<HomeScreen>
     'Tümü',
     'Aktif Hastalar',
     'Yeni Hastalar',
-    'Randevulu Hastalar'
+    'Randevulu Hastalar',
+    'Doktor Atanmış Hastalar'
   ];
   int _selectedCategoryIndex = 0;
 
@@ -70,23 +71,40 @@ class _HomeScreenState extends State<HomeScreen>
     // Önce kategoriye göre filtrele
     List<User> categoryFiltered = _users;
     if (_selectedCategoryIndex > 0) {
-      // Burada gerçek bir kategori filtresi uygulayabilirsiniz
-      // Örnek olarak basit bir filtreleme yapıyoruz
+      // Gerçek verilere dayalı filtreleme
+      final now = DateTime.now();
+      final oneWeekAgo = now.subtract(const Duration(days: 7));
+
       switch (_selectedCategoryIndex) {
-        case 1: // Aktif Hastalar
-          categoryFiltered = _users
-              .where((user) => user.id % 2 == 0)
-              .toList(); // Örnek filtreleme
+        case 1: // Aktif Hastalar - Son 30 gün içinde kaydedilmiş kullanıcılar
+          final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+          categoryFiltered = _users.where((user) {
+            // Kullanıcının kayıt tarihi varsa ve son 30 gün içindeyse
+            if (user.createdDate != null) {
+              return user.createdDate!.isAfter(thirtyDaysAgo);
+            }
+            return false;
+          }).toList();
           break;
-        case 2: // Yeni Hastalar
-          categoryFiltered = _users
-              .where((user) => user.id % 3 == 0)
-              .toList(); // Örnek filtreleme
+        case 2: // Yeni Hastalar - Son 7 gün içinde kaydedilmiş kullanıcılar
+          categoryFiltered = _users.where((user) {
+            // Kullanıcının kayıt tarihi varsa ve son 7 gün içindeyse
+            if (user.createdDate != null) {
+              return user.createdDate!.isAfter(oneWeekAgo);
+            }
+            return false;
+          }).toList();
           break;
-        case 3: // Randevulu Hastalar
+        case 3: // Randevulu Hastalar - Randevusu olan kullanıcılar
+          // Burada gerçek randevu verisi olmadığı için,
+          // örnek olarak ID'si 5'in katı olan kullanıcıları gösteriyoruz
+          // Gerçek uygulamada, randevusu olan kullanıcıları API'den almalısınız
+          categoryFiltered = _users.where((user) => user.id % 5 == 0).toList();
+          break;
+        case 4: // Doktor Atanmış Hastalar
           categoryFiltered = _users
-              .where((user) => user.id % 5 == 0)
-              .toList(); // Örnek filtreleme
+              .where((user) => user.doctorId != null && user.doctorName != null)
+              .toList();
           break;
       }
     }
@@ -110,9 +128,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _fetchUsers() async {
     try {
-      print('Fetching users...');
       final users = await _apiService.getAllUsers();
-      print('Users fetched: ${users.length}');
 
       if (mounted) {
         setState(() {
@@ -123,11 +139,27 @@ class _HomeScreenState extends State<HomeScreen>
         });
       }
     } catch (e) {
-      print('Error fetching users: $e');
-
       if (mounted) {
+        String userFriendlyMessage;
+
+        // Hata türüne göre kullanıcı dostu mesajlar
+        if (e.toString().contains('SocketException') ||
+            e.toString().contains('Connection refused')) {
+          userFriendlyMessage =
+              'Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.';
+        } else if (e.toString().contains('TimeoutException')) {
+          userFriendlyMessage =
+              'Sunucu yanıt vermiyor. Lütfen daha sonra tekrar deneyin.';
+        } else if (e.toString().contains('FormatException')) {
+          userFriendlyMessage =
+              'Sunucudan gelen veri işlenemedi. Lütfen daha sonra tekrar deneyin.';
+        } else {
+          userFriendlyMessage =
+              'Hastalar yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.';
+        }
+
         setState(() {
-          _errorMessage = 'Kullanıcılar yüklenirken bir hata oluştu: $e';
+          _errorMessage = userFriendlyMessage;
           _isLoading = false;
         });
       }
@@ -224,13 +256,7 @@ class _HomeScreenState extends State<HomeScreen>
           Expanded(child: _buildBody()),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Yeni hasta ekleme fonksiyonu
-        },
-        tooltip: 'Yeni Hasta Ekle',
-        child: const Icon(Icons.add),
-      ),
+      // Hasta ekleme butonu kaldırıldı - kullanıcılar kayıt olduklarında otomatik olarak hasta olarak kaydedilir
       // Alt gezinme çubuğu
       bottomNavigationBar: BottomNavigationBar(
         items: const [
@@ -284,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.errorColor.withOpacity(0.1),
+                color: AppTheme.errorColor.withAlpha(25),
                 blurRadius: 20,
                 offset: const Offset(0, 5),
               ),
@@ -297,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.1),
+                  color: AppTheme.errorColor.withAlpha(25),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -356,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withAlpha(13),
                 blurRadius: 20,
                 offset: const Offset(0, 5),
               ),
@@ -369,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withAlpha(25),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -390,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               const SizedBox(height: 12),
               const Text(
-                'Yeni hasta eklemek için aşağıdaki butonu kullanabilirsiniz.',
+                'Yeni kullanıcılar kayıt olduklarında otomatik olarak hasta olarak eklenirler.',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppTheme.secondaryTextColor,
@@ -400,10 +426,10 @@ class _HomeScreenState extends State<HomeScreen>
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
-                  // Yeni hasta ekleme fonksiyonu
+                  _fetchUsers();
                 },
-                icon: const Icon(Icons.add),
-                label: const Text('Yeni Hasta Ekle'),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Yenile'),
                 style: ElevatedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -429,7 +455,7 @@ class _HomeScreenState extends State<HomeScreen>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withAlpha(13),
                       blurRadius: 20,
                       offset: const Offset(0, 5),
                     ),
@@ -442,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.warningColor.withOpacity(0.1),
+                        color: AppTheme.warningColor.withAlpha(25),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -494,7 +520,27 @@ class _HomeScreenState extends State<HomeScreen>
               padding: const EdgeInsets.all(16),
               itemCount: _filteredUsers.length,
               itemBuilder: (context, index) {
-                return UserListItem(user: _filteredUsers[index]);
+                return UserListItem(
+                  user: _filteredUsers[index],
+                  onUserUpdated: (updatedUser) {
+                    // Kullanıcı listesini güncelle
+                    setState(() {
+                      // Güncellenmiş kullanıcıyı bul ve güncelle
+                      final userIndex =
+                          _users.indexWhere((u) => u.id == updatedUser.id);
+                      if (userIndex != -1) {
+                        _users[userIndex] = updatedUser;
+                      }
+
+                      // Filtrelenmiş listeyi de güncelle
+                      final filteredIndex = _filteredUsers
+                          .indexWhere((u) => u.id == updatedUser.id);
+                      if (filteredIndex != -1) {
+                        _filteredUsers[filteredIndex] = updatedUser;
+                      }
+                    });
+                  },
+                );
               },
             ),
     );

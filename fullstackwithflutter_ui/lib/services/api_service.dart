@@ -40,36 +40,88 @@ class ApiService {
 
   // Token al
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(_tokenKey);
+
+      // Token'ın geçerliliğini kontrol et
+      if (token != null && token.isNotEmpty) {
+        // JWT token'ın süresi dolmuş mu kontrol et
+        if (_isTokenExpired(token)) {
+          // Token süresi dolmuşsa sil
+          await deleteToken();
+          return null;
+        }
+        return token;
+      }
+      return null;
+    } catch (e) {
+      // Hata durumunda null dön
+      return null;
+    }
+  }
+
+  // Token'ın süresinin dolup dolmadığını kontrol et
+  bool _isTokenExpired(String token) {
+    try {
+      // JWT token'ı decode et
+      final parts = token.split('.');
+      if (parts.length != 3) return true; // Geçersiz token formatı
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = jsonDecode(decoded) as Map<String, dynamic>;
+
+      // exp (expiration time) claim'ini kontrol et
+      if (payloadMap.containsKey('exp')) {
+        final exp = payloadMap['exp'];
+        final expDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+        return DateTime.now().isAfter(expDate);
+      }
+
+      return false; // exp claim'i yoksa token'ın süresi dolmamış kabul et
+    } catch (e) {
+      return true; // Hata durumunda token'ın süresinin dolduğunu varsay
+    }
   }
 
   // Token kaydet
   Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenKey, token);
+    } catch (e) {
+      // Hata durumunda sessizce devam et
+    }
   }
 
   // Token sil (logout için)
   Future<void> deleteToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenKey);
+    } catch (e) {
+      // Hata durumunda sessizce devam et
+    }
   }
 
   // Get all users
   Future<List<User>> getAllUsers() async {
     try {
+      // Token'i al (eğer varsa)
+      final token = await getToken();
+
       final response = await http.get(
         Uri.parse('$baseUrl/Users/GetAllUsers'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
         final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
-
-        // Debug: API'den gelen veriyi yazdır
-        print('API Response: $decodedData');
-        print('API Response Type: ${decodedData.runtimeType}');
 
         // API'den gelen veri bir liste ise
         if (decodedData is List) {
@@ -78,8 +130,6 @@ class ApiService {
         // API'den gelen veri bir nesne ise ve 'data' alanı içeriyorsa
         else if (decodedData is Map && decodedData.containsKey('data')) {
           final dynamic data = decodedData['data'];
-          print('Data field: $data');
-          print('Data field type: ${data.runtimeType}');
 
           // data bir liste ise
           if (data is List) {
@@ -92,13 +142,62 @@ class ApiService {
           }
           // Diğer durumlar için boş liste dön
           else {
-            print('Data field is not a list or does not contain items');
             return [];
           }
         }
         // Diğer durumlar için boş liste dön
         else {
-          print('API response is not a list or does not contain data field');
+          return [];
+        }
+      } else {
+        throw Exception('Hata: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('API bağlantı hatası: $e');
+    }
+  }
+
+  // Get all doctors
+  Future<List<Doctor>> getAllDoctors() async {
+    try {
+      // Token'i al (eğer varsa)
+      final token = await getToken();
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/Doctors/GetAllDoctors'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API'den gelen veri bir liste ise
+        if (decodedData is List) {
+          return decodedData.map((json) => Doctor.fromJson(json)).toList();
+        }
+        // API'den gelen veri bir nesne ise ve 'data' alanı içeriyorsa
+        else if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+
+          // data bir liste ise
+          if (data is List) {
+            return data.map((json) => Doctor.fromJson(json)).toList();
+          }
+          // data bir nesne ise ve 'items' veya benzer bir alanı varsa
+          else if (data is Map && data.containsKey('items')) {
+            final List<dynamic> items = data['items'];
+            return items.map((json) => Doctor.fromJson(json)).toList();
+          }
+          // Diğer durumlar için boş liste dön
+          else {
+            return [];
+          }
+        }
+        // Diğer durumlar için boş liste dön
+        else {
           return [];
         }
       } else {
@@ -175,8 +274,29 @@ class ApiService {
 
       if (response.statusCode == 200) {
         // Başarılı giriş
-        if (data.containsKey('token')) {
-          // Token'i kaydet
+        // API yanıt formatını kontrol et
+        if (data.containsKey('data') && data['data'] is Map) {
+          final responseData = data['data'] as Map<String, dynamic>;
+
+          // Token kontrolü
+          if (responseData.containsKey('token')) {
+            // Token'i kaydet
+            await saveToken(responseData['token']);
+
+            // Kullanıcı bilgilerini kaydet
+            if (responseData.containsKey('user')) {
+              await saveUserData(responseData['user'] as Map<String, dynamic>);
+            } else {
+              // Eğer API kullanıcı bilgilerini dönmüyorsa, email'i kaydedelim
+              await saveUserData({
+                'email': email,
+                'fullName': email.split('@')[0], // Basit bir varsayılan isim
+                'phoneNumber': '',
+              });
+            }
+          }
+        } else if (data.containsKey('token')) {
+          // Eski format için geriye dönük uyumluluk
           await saveToken(data['token']);
 
           // Kullanıcı bilgilerini kaydet
@@ -189,6 +309,31 @@ class ApiService {
               'fullName': email.split('@')[0], // Basit bir varsayılan isim
               'phoneNumber': '',
             });
+          }
+        } else {
+          // Token yoksa, giriş başarılı olsa bile kullanıcı bilgilerini al
+          await saveUserData({
+            'email': email,
+            'fullName': email.split('@')[0], // Basit bir varsayılan isim
+            'phoneNumber': '',
+          });
+
+          // Giriş başarılı olduktan sonra kullanıcı bilgilerini almak için API'ye istek gönder
+          try {
+            // Önce token'ı kaydet (eğer varsa)
+            if (data.containsKey('token')) {
+              await saveToken(data['token']);
+            }
+
+            // Kullanıcı bilgilerini al
+            final userResult = await getCurrentUser();
+
+            if (userResult['success'] && userResult['data'] != null) {
+              // Kullanıcı bilgilerini güncelle
+              await saveUserData(userResult['data'] as Map<String, dynamic>);
+            }
+          } catch (e) {
+            // Hata durumunda bir şey yapma, en azından giriş yapılmış olsun
           }
         }
 
@@ -315,16 +460,61 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        final dynamic data = jsonDecode(utf8.decode(response.bodyBytes));
+        final dynamic responseData =
+            jsonDecode(utf8.decode(response.bodyBytes));
 
-        // Debug: API'den gelen veriyi yazdır
-        print('Current User API Response: $data');
+        // API yanıt formatını kontrol et
+        if (responseData is Map && responseData.containsKey('data')) {
+          // Yeni API formatı (ApiResponse sınıfı)
+          final userData = responseData['data'];
 
-        return {
-          'success': true,
-          'message': 'Kullanıcı bilgileri alındı',
-          'data': data,
-        };
+          // Kullanıcı ID'sini ekleyelim
+          if (userData is Map &&
+              !userData.containsKey('id') &&
+              responseData.containsKey('userId')) {
+            userData['id'] = responseData['userId'];
+          }
+
+          return {
+            'success': responseData['status'] == true,
+            'message': responseData['message'] ?? 'Kullanıcı bilgileri alındı',
+            'data': userData,
+          };
+        } else {
+          // Eski format veya farklı bir format
+          // Kullanıcı ID'sini ekleyelim
+          if (responseData is Map && !responseData.containsKey('id')) {
+            // Token'dan kullanıcı ID'sini çıkarmaya çalış
+            final token = await getToken();
+            if (token != null) {
+              try {
+                // JWT token'ı decode et (basit bir yöntem)
+                final parts = token.split('.');
+                if (parts.length == 3) {
+                  final payload = parts[1];
+                  final normalized = base64Url.normalize(payload);
+                  final decoded = utf8.decode(base64Url.decode(normalized));
+                  final payloadMap =
+                      jsonDecode(decoded) as Map<String, dynamic>;
+
+                  // userId claim'ini kontrol et
+                  if (payloadMap.containsKey('userId')) {
+                    responseData['id'] =
+                        int.parse(payloadMap['userId'].toString());
+                  }
+                }
+              } catch (e) {
+                // Token decode edilemezse bir şey yapma
+              }
+            }
+          }
+
+          return {
+            'success': true,
+            'message': 'Kullanıcı bilgileri alındı',
+            'data': responseData,
+          };
+        }
       } else {
         return {
           'success': false,
@@ -333,7 +523,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('Error getting current user: $e');
+      // Hata durumunu loglama
       return {
         'success': false,
         'message': 'API bağlantı hatası: $e',
@@ -344,17 +534,120 @@ class ApiService {
 
   // Kullanıcı bilgilerini kaydet (SharedPreferences'a)
   Future<void> saveUserData(Map<String, dynamic> userData) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_data', jsonEncode(userData));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Hassas bilgileri filtrele
+      final filteredData = Map<String, dynamic>.from(userData);
+
+      // Şifre gibi hassas bilgileri kaydetme
+      filteredData.remove('password');
+      filteredData.remove('newPassword');
+
+      // Kullanıcı verilerini kaydet
+      await prefs.setString('user_data', jsonEncode(filteredData));
+    } catch (e) {
+      // Hata durumunda sessizce devam et
+    }
+  }
+
+  // Kullanıcı profilini güncelle
+  Future<Map<String, dynamic>> updateProfile(
+      Map<String, dynamic> userData) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Oturum açılmamış',
+          'data': null,
+        };
+      }
+
+      // Önce mevcut kullanıcı bilgilerini al
+      final currentUserData = await getUserData();
+      if (currentUserData == null) {
+        return {
+          'success': false,
+          'message': 'Kullanıcı bilgileri bulunamadı',
+          'data': null,
+        };
+      }
+
+      // Kullanıcı ID'sini al
+      final userId = currentUserData['id'];
+
+      // Eğer ID yoksa, sadece yerel verileri güncelle
+      if (userId == null) {
+        // Yerel verileri güncelle
+        await saveUserData(userData);
+
+        return {
+          'success': true,
+          'message': 'Profil bilgileri yerel olarak güncellendi',
+          'data': userData,
+        };
+      }
+
+      // Backend'in beklediği endpoint'i kullan
+      final response = await http.put(
+        Uri.parse('$baseUrl/Users/UpdateUser/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'id': userId,
+          'fullName': userData['fullName'],
+          'email': userData['email'],
+          'mobileNumber': userData['phoneNumber'],
+          // Şifre alanını boş bırak, şifre değiştirme ayrı bir işlem olmalı
+          'password': '',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // Yerel verileri güncelle
+        await saveUserData(userData);
+
+        return {
+          'success': true,
+          'message': 'Profil bilgileri başarıyla güncellendi',
+          'data': userData,
+        };
+      } else {
+        return {
+          'success': false,
+          'message':
+              'Profil güncellenirken bir hata oluştu: ${response.statusCode}',
+          'data': null,
+        };
+      }
+    } catch (e) {
+      // Hata durumunda, yine de yerel verileri güncelle
+      await saveUserData(userData);
+
+      return {
+        'success': true,
+        'message': 'Profil bilgileri yerel olarak güncellendi (API hatası: $e)',
+        'data': userData,
+      };
+    }
   }
 
   // Kullanıcı bilgilerini al (SharedPreferences'dan)
   Future<Map<String, dynamic>?> getUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userDataString = prefs.getString('user_data');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
 
-    if (userDataString != null) {
-      return jsonDecode(userDataString) as Map<String, dynamic>;
+      if (userDataString != null && userDataString.isNotEmpty) {
+        return jsonDecode(userDataString) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      // Hata durumunda null dön
     }
 
     return null;
@@ -421,7 +714,7 @@ class ApiService {
           };
         }
       } catch (e) {
-        print('Error parsing response: $e');
+        // Hata durumunu loglama
 
         // Başarı durumunu HTTP durum koduna göre belirle
         if (response.statusCode == 200 || response.statusCode == 201) {
@@ -439,7 +732,7 @@ class ApiService {
         }
       }
     } catch (e) {
-      print('Error adding user: $e');
+      // Hata durumunu loglama
       return {
         'success': false,
         'message': 'API bağlantı hatası: $e',
@@ -496,8 +789,7 @@ class ApiService {
           };
         }
       } catch (e) {
-        print('Error parsing response: $e');
-
+        // Hata durumunu loglama
         // Başarı durumunu HTTP durum koduna göre belirle
         if (response.statusCode == 200 || response.statusCode == 204) {
           return {
@@ -514,7 +806,6 @@ class ApiService {
         }
       }
     } catch (e) {
-      print('Error updating user: $e');
       return {
         'success': false,
         'message': 'API bağlantı hatası: $e',
@@ -570,8 +861,7 @@ class ApiService {
           };
         }
       } catch (e) {
-        print('Error parsing response: $e');
-
+        // Hata durumunu loglama
         // Başarı durumunu HTTP durum koduna göre belirle
         if (response.statusCode == 200 || response.statusCode == 204) {
           return {
@@ -588,7 +878,6 @@ class ApiService {
         }
       }
     } catch (e) {
-      print('Error deleting user: $e');
       return {
         'success': false,
         'message': 'API bağlantı hatası: $e',
@@ -602,9 +891,15 @@ class ApiService {
   // Tüm doktorları getir
   Future<List<Doctor>> getAllDoctors() async {
     try {
+      // Token'i al (eğer varsa)
+      final token = await getToken();
+
       final response = await http.get(
         Uri.parse('$baseUrl/Doctors/GetAllDoctors'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -649,6 +944,7 @@ class ApiService {
           email: 'mehmet.oz@example.com',
           phoneNumber: '0555-123-4567',
           isAvailable: true,
+          createdDate: DateTime.now().subtract(const Duration(days: 30)),
         ),
         Doctor(
           id: 2,
@@ -657,6 +953,7 @@ class ApiService {
           email: 'zeynep.kaya@example.com',
           phoneNumber: '0555-234-5678',
           isAvailable: true,
+          createdDate: DateTime.now().subtract(const Duration(days: 60)),
         ),
         Doctor(
           id: 3,
@@ -665,6 +962,7 @@ class ApiService {
           email: 'ali.yildiz@example.com',
           phoneNumber: '0555-345-6789',
           isAvailable: false,
+          createdDate: DateTime.now().subtract(const Duration(days: 90)),
         ),
         Doctor(
           id: 4,
@@ -673,6 +971,7 @@ class ApiService {
           email: 'ayse.demir@example.com',
           phoneNumber: '0555-456-7890',
           isAvailable: true,
+          createdDate: DateTime.now().subtract(const Duration(days: 120)),
         ),
       ];
     }

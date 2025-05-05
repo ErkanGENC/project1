@@ -170,28 +170,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _saveProfile() {
+  Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
-      // Kullanıcı bilgilerini güncelle
-      final userData = {
-        'fullName': _fullNameController.text,
-        'email': _emailController.text,
-        'phoneNumber': _phoneController.text,
-      };
-
-      // SharedPreferences'a kaydet
-      _apiService.saveUserData(userData);
-
-      // Normalde burada API'ye güncelleme isteği atılır
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil bilgileriniz güncellendi'),
-          backgroundColor: Colors.green,
-        ),
-      );
       setState(() {
-        _isEditing = false;
+        _isLoading = true;
       });
+
+      try {
+        // Kullanıcı bilgilerini güncelle
+        final userData = {
+          'fullName': _fullNameController.text,
+          'email': _emailController.text,
+          'phoneNumber': _phoneController.text,
+        };
+
+        // API'ye güncelleme isteği gönder
+        final result = await _apiService.updateProfile(userData);
+
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+          _isEditing = false;
+        });
+
+        if (result['success']) {
+          // Başarılı güncelleme
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(result['message'] ?? 'Profil bilgileriniz güncellendi'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Hata durumu
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  result['message'] ?? 'Profil güncellenirken bir hata oluştu'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bir hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

@@ -3,11 +3,14 @@ using FullstackWithFlutter.Core.Interfaces;
 using FullstackWithFlutter.Infrastructure.DIExtensions;
 using FullstackWithFlutter.Services;
 using FullstackWithFlutter.Services.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Text;
 
 public class Program
 {
@@ -35,6 +38,22 @@ public class Program
         builder.Services.AddControllers();
         builder.Services.AddRepositories(builder.Configuration);
         builder.Services.AddAutoMapper(typeof(Program));
+
+        // JWT Authentication yapılandırması
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes("FullstackWithFlutterSecretKey12345678901234567890"))
+                };
+            });
+
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<IDoctorService, DoctorService>();
@@ -90,7 +109,11 @@ public class Program
         // HTTPS yönlendirmesini tekrar etkinleştiriyoruz
         app.UseHttpsRedirection();
         app.UseCors("AllowAll"); // Specify the policy name here
+
+        // JWT Authentication ve Authorization middleware'lerini ekle
+        app.UseAuthentication();
         app.UseAuthorization();
+
         app.MapControllers();
 
         app.Run();

@@ -256,5 +256,78 @@ namespace FullstackWithFlutter.Controllers
         {
             return await Delete(userId);
         }
+
+        // Mevcut kullanıcı bilgilerini getir
+        [HttpGet("GetCurrentUser")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            try
+            {
+                // Kullanıcı kimliğini al (JWT token'dan)
+                var userId = GetUserIdFromToken();
+
+                if (userId <= 0)
+                {
+                    return Unauthorized(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Oturum açılmamış",
+                        Data = null
+                    });
+                }
+
+                var user = await _userService.GetUserById(userId);
+                if (user != null)
+                {
+                    var resp = new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Kullanıcı bilgileri başarıyla alındı",
+                        Data = user
+                    };
+                    return Ok(resp);
+                }
+                else
+                {
+                    var resp = new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Kullanıcı bilgileri bulunamadı",
+                        Data = null
+                    };
+                    return NotFound(resp);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kullanıcı bilgileri alınırken hata oluştu");
+                var resp = new ApiResponse
+                {
+                    Status = false,
+                    Message = "Hata: " + ex.Message,
+                    Data = null
+                };
+                return BadRequest(resp);
+            }
+        }
+
+        // JWT token'dan kullanıcı ID'sini al
+        private int GetUserIdFromToken()
+        {
+            try
+            {
+                // Kullanıcı kimliğini al
+                var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "userId");
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return userId;
+                }
+                return 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
     }
 }

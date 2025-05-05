@@ -8,11 +8,14 @@
         public string? Password { get; set; }
         public string? MobileNumber { get; set; }
 
+        // Doktor bilgileri
+        public int? DoctorId { get; set; }
+        public string? DoctorName { get; set; }
+        public string? Specialization { get; set; }
+
         public DateTime CreatedDate { get; set; }
         public string? CreatedBy { get; set; }
         public DateTime? UpdatedDate { get; set; }
-
         public string? UpdatedBy { get; set; }
-
     }
 }

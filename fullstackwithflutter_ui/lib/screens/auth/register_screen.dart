@@ -188,8 +188,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
 
-        // Giriş sayfasına yönlendirme
-        Navigator.pushReplacementNamed(context, AppRoutes.login);
+        // Eğer API token ve kullanıcı bilgilerini döndürdüyse, otomatik giriş yap
+        if (result['data'] != null && result['data'] is Map) {
+          final data = result['data'] as Map<String, dynamic>;
+
+          if (data.containsKey('token')) {
+            // Token'i kaydet
+            await _apiService.saveToken(data['token']);
+
+            // Kullanıcı bilgilerini kaydet
+            if (data.containsKey('user')) {
+              await _apiService
+                  .saveUserData(data['user'] as Map<String, dynamic>);
+            }
+
+            // Ana sayfaya yönlendir
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, AppRoutes.home);
+              return;
+            }
+          }
+        }
+
+        // Token yoksa giriş sayfasına yönlendir
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.login);
+        }
       } else {
         // Hata durumu
         ScaffoldMessenger.of(context).showSnackBar(

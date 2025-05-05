@@ -3,6 +3,9 @@ using FullstackWithFlutter.Core.Interfaces;
 using FullstackWithFlutter.Core.Models;
 using FullstackWithFlutter.Core.ViewModels;
 using FullstackWithFlutter.Services.Interfaces;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -51,11 +54,18 @@ namespace FullstackWithFlutter.Services
                 // Kullanıcı bilgilerini döndür
                 var userViewModel = _mapper.Map<AppUserViewModel>(user);
 
+                // JWT token oluştur
+                var token = GenerateJwtToken(user);
+
                 return new ApiResponse
                 {
                     Status = true,
                     Message = "Giriş başarılı!",
-                    Data = userViewModel
+                    Data = new
+                    {
+                        user = userViewModel,
+                        token = token
+                    }
                 };
             }
             catch (Exception ex)
@@ -93,16 +103,33 @@ namespace FullstackWithFlutter.Services
                 // Şifreyi hashle
                 newUser.Password = HashPassword(userViewModel.Password);
 
+                // Kullanıcıyı ekle
                 await _unitofWork.AppUsers.Add(newUser);
                 var result = _unitofWork.Complete();
 
                 if (result > 0)
                 {
+                    // Kullanıcı başarıyla kaydedildi, şimdi JWT token oluşturalım
+                    var token = GenerateJwtToken(newUser);
+
+                    // Kullanıcı bilgilerini döndür
+                    var registeredUserViewModel = _mapper.Map<AppUserViewModel>(newUser);
+
+                    // Kullanıcıyı otomatik olarak hasta olarak ekle
+                    // Burada kullanıcı zaten AppUser tablosuna eklendiği için
+                    // ve AppUser tablosu ile Patient tablosu aynı olduğu için
+                    // ek bir işlem yapmaya gerek yok. Kullanıcı zaten hasta olarak kaydedilmiş oluyor.
+                    // Eğer ayrı bir Patient tablosu olsaydı, burada ek işlem yapılması gerekirdi.
+
                     return new ApiResponse
                     {
                         Status = true,
-                        Message = "Kayıt başarılı!",
-                        Data = null
+                        Message = "Kayıt başarılı! Kullanıcı otomatik olarak hasta olarak eklendi.",
+                        Data = new
+                        {
+                            user = registeredUserViewModel,
+                            token = token
+                        }
                     };
                 }
                 else
@@ -137,6 +164,36 @@ namespace FullstackWithFlutter.Services
                 var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
                 return Convert.ToBase64String(hashedBytes);
             }
+        }
+
+        // JWT Token oluşturma
+        private string GenerateJwtToken(AppUser user)
+        {
+            // Token için güvenlik anahtarı
+            var securityKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes("FullstackWithFlutterSecretKey12345678901234567890"));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            // Token içeriğindeki bilgiler (claims)
+            var claims = new[]
+            {
+                new Claim("userId", user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Name, user.FullName ?? ""),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            // Token oluştur
+            var token = new JwtSecurityToken(
+                issuer: null, // Issuer belirtilmedi
+                audience: null, // Audience belirtilmedi
+                claims: claims,
+                expires: DateTime.Now.AddDays(7), // 7 gün geçerli
+                signingCredentials: credentials
+            );
+
+            // Token'ı string olarak döndür
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         // Şifre doğrulama

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../constants/app_theme.dart';
+import '../screens/doctor/select_doctor_screen.dart';
 
 class UserListItem extends StatelessWidget {
   final User user;
+  final Function(User)? onUserUpdated;
 
   const UserListItem({
-    Key? key,
+    super.key,
     required this.user,
-  }) : super(key: key);
+    this.onUserUpdated,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +60,7 @@ class UserListItem extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: avatarColor.withOpacity(0.3),
+                        color: avatarColor.withAlpha(76),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -128,6 +131,30 @@ class UserListItem extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (user.doctorName != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.medical_services_outlined,
+                            size: 16,
+                            color: AppTheme.accentColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Dr. ${user.doctorName} (${user.specialization})',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.accentColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -137,7 +164,7 @@ class UserListItem extends StatelessWidget {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withAlpha(25),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
@@ -160,7 +187,7 @@ class UserListItem extends StatelessWidget {
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: AppTheme.accentColor.withOpacity(0.1),
+                      color: AppTheme.accentColor.withAlpha(25),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
@@ -170,9 +197,25 @@ class UserListItem extends StatelessWidget {
                         size: 20,
                       ),
                       onPressed: () {
-                        // Tedavi bilgilerini görüntüle
+                        // Doktor seçme ekranını aç
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SelectDoctorScreen(
+                              user: user,
+                              onDoctorSelected: (updatedUser) {
+                                // Callback ile güncellenmiş kullanıcıyı geri döndür
+                                if (onUserUpdated != null) {
+                                  onUserUpdated!(updatedUser);
+                                }
+                              },
+                            ),
+                          ),
+                        );
                       },
-                      tooltip: 'Tedavi Bilgileri',
+                      tooltip: user.doctorId == null
+                          ? 'Doktor Seç'
+                          : 'Doktor Değiştir',
                       constraints: const BoxConstraints(
                         minWidth: 40,
                         minHeight: 40,
