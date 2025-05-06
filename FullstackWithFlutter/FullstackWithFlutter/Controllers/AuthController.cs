@@ -1,6 +1,8 @@
 using FullstackWithFlutter.Core.ViewModels;
 using FullstackWithFlutter.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FullstackWithFlutter.Controllers
 {
@@ -9,10 +11,12 @@ namespace FullstackWithFlutter.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
+            _logger = logger;
         }
 
         [HttpPost("Register")]
@@ -61,6 +65,69 @@ namespace FullstackWithFlutter.Controllers
             {
                 return BadRequest(result);
             }
+        }
+
+        [HttpPost("ChangePassword")]
+        [Authorize] // Kullanıcının oturum açmış olması gerekiyor
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation("ChangePassword endpoint called");
+
+                if (model == null || string.IsNullOrEmpty(model.CurrentPassword) || string.IsNullOrEmpty(model.NewPassword))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Mevcut şifre ve yeni şifre gereklidir!",
+                        Data = null
+                    });
+                }
+
+                // Token'dan kullanıcı ID'sini al
+                var userIdClaim = User.FindFirst("userId");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Kullanıcı kimliği doğrulanamadı!",
+                        Data = null
+                    });
+                }
+
+                var result = await _authService.ChangePassword(userId, model.CurrentPassword, model.NewPassword);
+                if (result.Status)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing password");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Şifre değiştirme sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        // Kullanıcı ID'sini token'dan al
+        private int GetUserIdFromToken()
+        {
+            var userIdClaim = User.FindFirst("userId");
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return userId;
+            }
+            return 0;
         }
     }
 }

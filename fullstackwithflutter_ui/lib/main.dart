@@ -10,6 +10,9 @@ void main() {
   // API servisinin platform ayarlarını yapılandır
   ApiService.configurePlatformSpecificUrl();
 
+  // Debug için API URL'yi yazdır
+  print('API URL: ${ApiService.baseUrl}');
+
   runApp(const MyApp());
 }
 

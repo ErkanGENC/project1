@@ -515,6 +515,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
                             // Şifre değiştirme sayfasına yönlendir
+                            Navigator.pushNamed(
+                                context, AppRoutes.changePassword);
                           },
                         ),
 
@@ -526,6 +528,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
                             // Bildirim ayarları sayfasına yönlendir
+                            Navigator.pushNamed(
+                                context, AppRoutes.notificationSettings);
                           },
                         ),
 
@@ -537,6 +541,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
                             // Gizlilik politikası sayfasına yönlendir
+                            Navigator.pushNamed(
+                                context, AppRoutes.privacyPolicy);
                           },
                         ),
 

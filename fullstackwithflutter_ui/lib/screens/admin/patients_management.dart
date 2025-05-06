@@ -99,7 +99,8 @@ class _PatientsManagementState extends State<PatientsManagement> {
                   if (value == null || value.isEmpty) {
                     return 'Lütfen e-posta girin';
                   }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                      .hasMatch(value)) {
                     return 'Geçerli bir e-posta girin';
                   }
                   return null;
@@ -223,7 +224,8 @@ class _PatientsManagementState extends State<PatientsManagement> {
                   if (value == null || value.isEmpty) {
                     return 'Lütfen e-posta girin';
                   }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                      .hasMatch(value)) {
                     return 'Geçerli bir e-posta girin';
                   }
                   return null;
@@ -313,7 +315,8 @@ class _PatientsManagementState extends State<PatientsManagement> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hastayı Sil'),
-        content: Text('${patient.fullName} adlı hastayı silmek istediğinize emin misiniz?'),
+        content: Text(
+            '${patient.fullName} adlı hastayı silmek istediğinize emin misiniz?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -405,7 +408,8 @@ class _PatientsManagementState extends State<PatientsManagement> {
                   icon: const Icon(Icons.add),
                   label: const Text('Yeni Hasta'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ],
@@ -455,7 +459,8 @@ class _PatientsManagementState extends State<PatientsManagement> {
                             itemBuilder: (context, index) {
                               final patient = _filteredPatients[index];
                               return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
                                 child: ListTile(
                                   leading: CircleAvatar(
                                     backgroundColor: AppTheme.primaryColor,
@@ -463,12 +468,14 @@ class _PatientsManagementState extends State<PatientsManagement> {
                                       patient.fullName.isNotEmpty
                                           ? patient.fullName[0].toUpperCase()
                                           : '?',
-                                      style: const TextStyle(color: Colors.white),
+                                      style:
+                                          const TextStyle(color: Colors.white),
                                     ),
                                   ),
                                   title: Text(patient.fullName),
                                   subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(patient.email),
                                       Text(patient.phoneNumber),
@@ -478,13 +485,18 @@ class _PatientsManagementState extends State<PatientsManagement> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () => _showEditPatientDialog(patient),
+                                        icon: const Icon(Icons.edit,
+                                            color: Colors.blue),
+                                        onPressed: () =>
+                                            _showEditPatientDialog(patient),
                                         tooltip: 'Düzenle',
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () => _showDeleteConfirmationDialog(patient),
+                                        icon: const Icon(Icons.delete,
+                                            color: Colors.red),
+                                        onPressed: () =>
+                                            _showDeleteConfirmationDialog(
+                                                patient),
                                         tooltip: 'Sil',
                                       ),
                                     ],

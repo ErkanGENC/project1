@@ -21,24 +21,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
   bool _isLoading = true;
   String _errorMessage = '';
   Map<String, dynamic> _dashboardData = {};
-  
+
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
   }
-  
+
   Future<void> _loadDashboardData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
-    
+
     try {
       // Gerçek uygulamada, API'den dashboard verilerini alacaksınız
       // Şimdilik örnek veriler kullanıyoruz
-      await Future.delayed(const Duration(seconds: 1)); // API çağrısı simülasyonu
-      
+      await Future.delayed(
+          const Duration(seconds: 1)); // API çağrısı simülasyonu
+
       setState(() {
         _dashboardData = {
           'totalPatients': 256,
@@ -52,7 +53,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               'id': 1,
               'type': 'appointment',
               'title': 'Yeni Randevu',
-              'description': 'Ayşe Yılmaz için diş kontrolü randevusu oluşturuldu',
+              'description':
+                  'Ayşe Yılmaz için diş kontrolü randevusu oluşturuldu',
               'time': '10 dakika önce',
               'icon': Icons.calendar_today,
               'color': AppTheme.primaryColor,
@@ -102,6 +104,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         actions: [
+          ElevatedButton.icon(
+            icon: const Icon(Icons.home),
+            label: const Text('Kullanıcı Paneli'),
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, '/');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
@@ -176,6 +190,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             decoration: BoxDecoration(
               color: AppTheme.primaryColor,
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text('Kullanıcı Paneli'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushReplacementNamed(context, '/');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.dashboard),
@@ -285,7 +307,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
           ),
           const SizedBox(height: 24),
-          
+
           // İstatistik Kartları
           Row(
             children: [
@@ -335,7 +357,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 32),
           Text(
             'Hızlı Erişim',
@@ -345,7 +367,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Hızlı Erişim Kartları
           Row(
             children: [
@@ -418,7 +440,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 32),
           Text(
             'Son Aktiviteler',
@@ -428,7 +450,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
           ),
           const SizedBox(height: 16),
-          
+
           // Son Aktiviteler
           RecentActivityCard(activities: _dashboardData['recentActivities']),
         ],

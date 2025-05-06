@@ -48,6 +48,7 @@ namespace FullstackWithFlutter.Controllers
         {
             try
             {
+                _logger.LogInformation("GetAllUsers endpoint called");
                 var userList = await _userService.GetAllUsers();
                 if (userList != null && userList.Any())
                 {
@@ -57,6 +58,7 @@ namespace FullstackWithFlutter.Controllers
                         Message = "All users fetched successfully",
                         Data = userList,
                     };
+                    _logger.LogInformation($"GetAllUsers: Found {userList.Count} users");
                     return Ok(resp);
                 }
                 else
@@ -67,6 +69,7 @@ namespace FullstackWithFlutter.Controllers
                         Message = "No users found",
                         Data = new List<AppUserViewModel>(), // Boş liste dön
                     };
+                    _logger.LogInformation("GetAllUsers: No users found");
                     return Ok(resp);
                 }
             }

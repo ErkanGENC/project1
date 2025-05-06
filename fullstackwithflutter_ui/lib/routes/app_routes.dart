@@ -4,6 +4,9 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
 import '../screens/user/profile_screen.dart';
+import '../screens/user/change_password_screen.dart';
+import '../screens/user/notification_settings_screen.dart';
+import '../screens/user/privacy_policy_screen.dart';
 import '../screens/dental/dental_health_screen.dart';
 import '../screens/admin/admin_dashboard.dart';
 import '../screens/admin/patients_management.dart';
@@ -21,6 +24,11 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String dentalHealth = '/dental-health';
 
+  // Kullanıcı profil rotaları
+  static const String changePassword = '/profile/change-password';
+  static const String notificationSettings = '/profile/notification-settings';
+  static const String privacyPolicy = '/profile/privacy-policy';
+
   // Admin rotaları
   static const String adminDashboard = '/admin';
   static const String patientsManagement = '/admin/patients';
@@ -37,6 +45,11 @@ class AppRoutes {
       forgotPassword: (context) => const ForgotPasswordScreen(),
       profile: (context) => const ProfileScreen(),
       dentalHealth: (context) => const DentalHealthScreen(),
+
+      // Kullanıcı profil rotaları
+      changePassword: (context) => const ChangePasswordScreen(),
+      notificationSettings: (context) => const NotificationSettingsScreen(),
+      privacyPolicy: (context) => const PrivacyPolicyScreen(),
 
       // Admin rotaları
       adminDashboard: (context) => const AdminDashboard(),

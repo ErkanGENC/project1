@@ -33,6 +33,9 @@ class ApiService {
       // Diğer platformlar için varsayılan olarak localhost kullanılır
       baseUrl = 'http://localhost:5008/api';
     }
+
+    // Debug için URL'yi yazdır
+    print('API URL: $baseUrl');
   }
 
   // Token saklama anahtarı
@@ -112,6 +115,10 @@ class ApiService {
       // Token'i al (eğer varsa)
       final token = await getToken();
 
+      // Debug için token bilgisini yazdır
+      print(
+          'Token for GetAllUsers: ${token != null ? (token.length > 10 ? token.substring(0, 10) + "..." : token) : "null"}');
+
       final response = await http.get(
         Uri.parse('$baseUrl/Users/GetAllUsers'),
         headers: {
@@ -119,6 +126,9 @@ class ApiService {
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
+
+      // Debug için yanıtı yazdır
+      print('GetAllUsers response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 200) {
         final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
@@ -157,57 +167,6 @@ class ApiService {
     }
   }
 
-  // Get all doctors
-  Future<List<Doctor>> getAllDoctors() async {
-    try {
-      // Token'i al (eğer varsa)
-      final token = await getToken();
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/Doctors/GetAllDoctors'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
-
-        // API'den gelen veri bir liste ise
-        if (decodedData is List) {
-          return decodedData.map((json) => Doctor.fromJson(json)).toList();
-        }
-        // API'den gelen veri bir nesne ise ve 'data' alanı içeriyorsa
-        else if (decodedData is Map && decodedData.containsKey('data')) {
-          final dynamic data = decodedData['data'];
-
-          // data bir liste ise
-          if (data is List) {
-            return data.map((json) => Doctor.fromJson(json)).toList();
-          }
-          // data bir nesne ise ve 'items' veya benzer bir alanı varsa
-          else if (data is Map && data.containsKey('items')) {
-            final List<dynamic> items = data['items'];
-            return items.map((json) => Doctor.fromJson(json)).toList();
-          }
-          // Diğer durumlar için boş liste dön
-          else {
-            return [];
-          }
-        }
-        // Diğer durumlar için boş liste dön
-        else {
-          return [];
-        }
-      } else {
-        throw Exception('Hata: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('API bağlantı hatası: $e');
-    }
-  }
-
   // Kullanıcı kayıt (Register)
   Future<Map<String, dynamic>> register({
     required String fullName,
@@ -216,6 +175,10 @@ class ApiService {
     required DateTime birthDate,
   }) async {
     try {
+      // Debug için istek verilerini yazdır
+      print(
+          'Register request: fullName=$fullName, email=$email, birthDate=${birthDate.toIso8601String()}');
+
       final response = await http.post(
         Uri.parse('$baseUrl/Auth/Register'),
         headers: {'Content-Type': 'application/json'},
@@ -226,6 +189,9 @@ class ApiService {
           'birthDate': birthDate.toIso8601String(),
         }),
       );
+
+      // Debug için yanıtı yazdır
+      print('Register response: ${response.statusCode} - ${response.body}');
 
       final Map<String, dynamic> data =
           jsonDecode(utf8.decode(response.bodyBytes));
@@ -429,6 +395,102 @@ class ApiService {
         };
       }
     } catch (e) {
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // Şifre değiştirme (oturum açıkken)
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      // Debug için token bilgisini yazdır
+      print(
+          'Token for ChangePassword: ${token != null ? (token.length > 10 ? token.substring(0, 10) + "..." : token) : "null"}');
+
+      if (token == null) {
+        print('ChangePassword: Token bulunamadı');
+        return {
+          'success': false,
+          'message': 'Oturum açılmamış',
+          'data': null,
+        };
+      }
+
+      // Debug için istek URL'sini yazdır
+      final requestUrl = '$baseUrl/Auth/ChangePassword';
+      print('ChangePassword request URL: $requestUrl');
+
+      // Debug için istek gövdesini yazdır
+      final requestBody = {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      };
+      print('ChangePassword request body: $requestBody');
+
+      final response = await http.post(
+        Uri.parse(requestUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      // Debug için yanıtı yazdır
+      print(
+          'ChangePassword response: ${response.statusCode} - ${response.body}');
+
+      // API yanıtını işle
+      if (response.statusCode == 200) {
+        final dynamic responseData =
+            jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (responseData is Map && responseData.containsKey('status')) {
+          return {
+            'success': responseData['status'] == true,
+            'message':
+                responseData['message'] ?? 'Şifre başarıyla değiştirildi',
+            'data': responseData['data'],
+          };
+        } else {
+          return {
+            'success': true,
+            'message': 'Şifre başarıyla değiştirildi',
+            'data': responseData,
+          };
+        }
+      } else {
+        // Hata durumu
+        try {
+          final dynamic errorData = jsonDecode(utf8.decode(response.bodyBytes));
+          print('ChangePassword error data: $errorData');
+          return {
+            'success': false,
+            'message': errorData['message'] ??
+                'Şifre değiştirilemedi: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        } catch (e) {
+          print('ChangePassword error parsing response: $e');
+          return {
+            'success': false,
+            'message': 'Şifre değiştirilemedi: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        }
+      }
+    } catch (e) {
+      print('ChangePassword exception: $e');
       return {
         'success': false,
         'message': 'API bağlantı hatası: $e',

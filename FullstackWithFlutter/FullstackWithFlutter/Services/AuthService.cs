@@ -100,6 +100,12 @@ namespace FullstackWithFlutter.Services
                 newUser.CreatedDate = DateTime.Now;
                 newUser.CreatedBy = "API";
 
+                // Doğum tarihi kontrolü
+                if (userViewModel.BirthDate.HasValue)
+                {
+                    newUser.BirthDate = userViewModel.BirthDate;
+                }
+
                 // Şifreyi hashle
                 newUser.Password = HashPassword(userViewModel.Password);
 
@@ -204,6 +210,72 @@ namespace FullstackWithFlutter.Services
 
             var hashedInput = HashPassword(password);
             return hashedInput == hashedPassword;
+        }
+
+        // Şifre değiştirme
+        public async Task<ApiResponse> ChangePassword(int userId, string currentPassword, string newPassword)
+        {
+            try
+            {
+                // Kullanıcıyı ID'ye göre bul
+                var user = await _unitofWork.AppUsers.Get(userId);
+                if (user == null)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Kullanıcı bulunamadı!",
+                        Data = null
+                    };
+                }
+
+                // Mevcut şifreyi doğrula
+                if (!VerifyPassword(currentPassword, user.Password))
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Mevcut şifre hatalı!",
+                        Data = null
+                    };
+                }
+
+                // Yeni şifreyi hashle ve kaydet
+                user.Password = HashPassword(newPassword);
+                user.UpdatedDate = DateTime.Now;
+                user.UpdatedBy = "API";
+
+                // Değişiklikleri kaydet
+                var result = _unitofWork.Complete();
+
+                if (result > 0)
+                {
+                    return new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Şifre başarıyla değiştirildi!",
+                        Data = null
+                    };
+                }
+                else
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Şifre değiştirilemedi!",
+                        Data = null
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse
+                {
+                    Status = false,
+                    Message = $"Şifre değiştirme sırasında bir hata oluştu: {ex.Message}",
+                    Data = null
+                };
+            }
         }
     }
 }

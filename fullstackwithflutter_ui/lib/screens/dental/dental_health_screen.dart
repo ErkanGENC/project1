@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
+import '../../models/dental_tracking_model.dart';
+import '../../models/user_model.dart';
+import '../../services/dental_tracking_service.dart';
 
 /// Ağız ve diş sağlığı takip ekranı
 class DentalHealthScreen extends StatefulWidget {
@@ -9,42 +12,166 @@ class DentalHealthScreen extends StatefulWidget {
   _DentalHealthScreenState createState() => _DentalHealthScreenState();
 }
 
-class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTickerProviderStateMixin {
+class _DentalHealthScreenState extends State<DentalHealthScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+  final DentalTrackingService _trackingService = DentalTrackingService();
+
+  // Kullanıcı bilgisi
+  User? _currentUser;
+
   // Diş fırçalama takibi için değişkenler
   int _brushingCount = 0;
   bool _morningBrushing = false;
   bool _eveningBrushing = false;
-  
+
   // Diş ipi kullanımı için değişkenler
   bool _usedFloss = false;
-  
+
   // Ağız gargarası kullanımı için değişkenler
   bool _usedMouthwash = false;
-  
+
+  // Notlar
+  String _notes = '';
+  late TextEditingController _notesController;
+
   // Günlük hedefler
-  final int _brushingTarget = 2;
-  final bool _flossTarget = true;
-  final bool _mouthwashTarget = true;
-  
-  // Haftalık istatistikler (örnek veriler)
-  final List<int> _weeklyBrushing = [2, 2, 1, 2, 2, 1, 0];
-  final List<bool> _weeklyFloss = [true, true, false, true, false, false, false];
-  final List<bool> _weeklyMouthwash = [true, true, true, false, true, false, false];
-  
+  final int _brushingTarget = DentalTrackingModel.brushingTarget;
+  final bool _flossTarget = DentalTrackingModel.flossTarget;
+  final bool _mouthwashTarget = DentalTrackingModel.mouthwashTarget;
+
+  // Haftalık istatistikler
+  List<int> _weeklyBrushing = List.filled(7, 0);
+  List<bool> _weeklyFloss = List.filled(7, false);
+  List<bool> _weeklyMouthwash = List.filled(7, false);
+
+  // Yükleniyor durumu
+  bool _isLoading = true;
+  String _errorMessage = '';
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _notesController = TextEditingController(text: _notes);
+    _loadUserData();
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
-  
+
+  // Kullanıcı verilerini yükle
+  Future<void> _loadUserData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
+      // Mevcut kullanıcıyı al
+      final user = await _trackingService.getCurrentUser();
+      if (user == null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Kullanıcı bilgileri alınamadı. Lütfen tekrar giriş yapın.';
+        });
+        return;
+      }
+
+      // Kullanıcı bilgilerini kaydet
+      _currentUser = user;
+
+      // Bugünkü kaydı al
+      final todaysRecord = await _trackingService.getTodaysRecord(user.id);
+      if (todaysRecord != null) {
+        setState(() {
+          _morningBrushing = todaysRecord.morningBrushing;
+          _eveningBrushing = todaysRecord.eveningBrushing;
+          _brushingCount = todaysRecord.brushingCount;
+          _usedFloss = todaysRecord.usedFloss;
+          _usedMouthwash = todaysRecord.usedMouthwash;
+          _notes = todaysRecord.notes ?? '';
+          _notesController.text = _notes;
+        });
+      }
+
+      // Haftalık istatistikleri al
+      final weeklyStats = await _trackingService.getWeeklyStats(user.id);
+      setState(() {
+        _weeklyBrushing = weeklyStats.weeklyBrushing;
+        _weeklyFloss = weeklyStats.weeklyFloss;
+        _weeklyMouthwash = weeklyStats.weeklyMouthwash;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Veriler yüklenirken bir hata oluştu: $e';
+      });
+    }
+  }
+
+  // Günlük kaydı kaydet
+  Future<void> _saveRecord() async {
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Kullanıcı bilgileri bulunamadı. Lütfen tekrar giriş yapın.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Yeni kayıt oluştur
+      final record = DentalTrackingModel.create(
+        userId: _currentUser!.id,
+        morningBrushing: _morningBrushing,
+        eveningBrushing: _eveningBrushing,
+        usedFloss: _usedFloss,
+        usedMouthwash: _usedMouthwash,
+        notes: _notes.isNotEmpty ? _notes : null,
+      );
+
+      // Kaydı kaydet
+      final success = await _trackingService.saveRecord(record);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Günlük takip kaydedildi!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Haftalık istatistikleri güncelle
+        await _loadUserData();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bir hata oluştu: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _updateBrushingStatus(String time, bool value) {
     setState(() {
       if (time == 'morning') {
@@ -52,11 +179,11 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       } else {
         _eveningBrushing = value;
       }
-      
+
       _brushingCount = (_morningBrushing ? 1 : 0) + (_eveningBrushing ? 1 : 0);
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,16 +197,68 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildDailyTrackingTab(),
-          _buildStatisticsTab(),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(
+                    'Veriler yükleniyor...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.secondaryTextColor,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _errorMessage.isNotEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 48,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Bir hata oluştu',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          _errorMessage,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _loadUserData,
+                        icon: Icon(Icons.refresh),
+                        label: Text('Tekrar Dene'),
+                      ),
+                    ],
+                  ),
+                )
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildDailyTrackingTab(),
+                    _buildStatisticsTab(),
+                  ],
+                ),
     );
   }
-  
+
   Widget _buildDailyTrackingTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -105,11 +284,11 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Günlük ilerleme özeti
           _buildProgressSummary(),
           const SizedBox(height: 32),
-          
+
           // Diş fırçalama takibi
           const Text(
             'Diş Fırçalama',
@@ -120,17 +299,19 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             icon: Icons.brush,
             title: 'Sabah Diş Fırçalama',
             isCompleted: _morningBrushing,
-            onChanged: (value) => _updateBrushingStatus('morning', value ?? false),
+            onChanged: (value) =>
+                _updateBrushingStatus('morning', value ?? false),
           ),
           const SizedBox(height: 8),
           _buildTrackingCard(
             icon: Icons.brush,
             title: 'Akşam Diş Fırçalama',
             isCompleted: _eveningBrushing,
-            onChanged: (value) => _updateBrushingStatus('evening', value ?? false),
+            onChanged: (value) =>
+                _updateBrushingStatus('evening', value ?? false),
           ),
           const SizedBox(height: 24),
-          
+
           // Diş ipi kullanımı
           const Text(
             'Diş İpi Kullanımı',
@@ -148,7 +329,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             },
           ),
           const SizedBox(height: 24),
-          
+
           // Ağız gargarası kullanımı
           const Text(
             'Ağız Gargarası',
@@ -166,7 +347,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             },
           ),
           const SizedBox(height: 24),
-          
+
           // Notlar
           const Text(
             'Notlar',
@@ -175,30 +356,31 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
           const SizedBox(height: 8),
           TextField(
             maxLines: 3,
+            onChanged: (value) {
+              setState(() {
+                _notes = value;
+              });
+            },
+            controller: _notesController,
             decoration: const InputDecoration(
               hintText: 'Bugün için notlarınızı buraya ekleyin...',
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Kaydet butonu
           Center(
             child: ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Günlük takip kaydedildi!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
+              onPressed: _saveRecord,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                backgroundColor: AppTheme.primaryColor,
               ),
               child: const Text(
                 'Günü Kaydet',
-                style: TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
           ),
@@ -206,15 +388,15 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ),
     );
   }
-  
+
   Widget _buildProgressSummary() {
     // Günlük hedeflerin tamamlanma durumu
     final int completedGoals = (_brushingCount >= _brushingTarget ? 1 : 0) +
         (_usedFloss == _flossTarget ? 1 : 0) +
         (_usedMouthwash == _mouthwashTarget ? 1 : 0);
-    
+
     final double progressPercentage = completedGoals / 3;
-    
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -261,14 +443,18 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
               minHeight: 10,
               backgroundColor: Colors.grey[300],
               valueColor: AlwaysStoppedAnimation<Color>(
-                progressPercentage == 1.0 ? Colors.green : AppTheme.primaryColor,
+                progressPercentage == 1.0
+                    ? Colors.green
+                    : AppTheme.primaryColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '${(progressPercentage * 100).toInt()}% tamamlandı',
               style: TextStyle(
-                color: progressPercentage == 1.0 ? Colors.green : AppTheme.primaryColor,
+                color: progressPercentage == 1.0
+                    ? Colors.green
+                    : AppTheme.primaryColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -277,10 +463,11 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ),
     );
   }
-  
-  Widget _buildProgressIndicator(String title, int current, int target, IconData icon) {
+
+  Widget _buildProgressIndicator(
+      String title, int current, int target, IconData icon) {
     final bool isCompleted = current >= target;
-    
+
     return Column(
       children: [
         Container(
@@ -313,7 +500,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ],
     );
   }
-  
+
   Widget _buildTrackingCard({
     required IconData icon,
     required String title,
@@ -336,7 +523,9 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                color: isCompleted
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -365,16 +554,24 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ),
     );
   }
-  
+
   Widget _buildStatisticsTab() {
     // Haftalık istatistikleri hesapla
     final int totalBrushing = _weeklyBrushing.reduce((a, b) => a + b);
     final int totalFloss = _weeklyFloss.where((day) => day).length;
     final int totalMouthwash = _weeklyMouthwash.where((day) => day).length;
-    
+
     // Haftanın günleri
-    final List<String> weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-    
+    final List<String> weekdays = [
+      'Pzt',
+      'Sal',
+      'Çar',
+      'Per',
+      'Cum',
+      'Cmt',
+      'Paz'
+    ];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -426,7 +623,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Diş fırçalama grafiği
           const Text(
             'Diş Fırçalama',
@@ -454,7 +651,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Diş ipi ve gargara grafiği
           const Text(
             'Diş İpi ve Gargara Kullanımı',
@@ -502,7 +699,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // İpuçları
           const Text(
             'Ağız Sağlığı İpuçları',
@@ -527,10 +724,11 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ),
     );
   }
-  
-  Widget _buildStatisticItem(String title, String value, IconData icon, double progress) {
+
+  Widget _buildStatisticItem(
+      String title, String value, IconData icon, double progress) {
     final Color color = progress >= 0.7 ? Colors.green : AppTheme.primaryColor;
-    
+
     return Column(
       children: [
         SizedBox(
@@ -578,12 +776,12 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ],
     );
   }
-  
+
   Widget _buildBarChartItem(String day, int value, int target) {
     final double percentage = value / target;
     final Color color = percentage >= 1 ? Colors.green : AppTheme.primaryColor;
     final double height = 120 * percentage;
-    
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -615,7 +813,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ],
     );
   }
-  
+
   Widget _buildStatusIndicator(String title, bool isCompleted) {
     return Expanded(
       child: Row(
@@ -641,7 +839,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen> with SingleTick
       ),
     );
   }
-  
+
   Widget _buildTipCard(String tip, IconData icon) {
     return Card(
       elevation: 2,

@@ -753,4 +753,3 @@ C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFl
 C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter\obj\Debug\net8.0\FullstackWithFlutter.genruntimeconfig.cache
 C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter\obj\Debug\net8.0\ref\FullstackWithFlutter.dll
 C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
-C:\Users\gence\OneDrive\Masaüstü\project1\FullstackWithFlutter\FullstackWithFlutter\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
