@@ -13,6 +13,7 @@ import '../screens/admin/patients_management.dart';
 import '../screens/admin/appointments_management.dart';
 import '../screens/admin/doctors_management.dart';
 import '../screens/admin/reports_page.dart';
+import '../screens/welcome_screen.dart';
 
 /// Uygulama içindeki tüm sayfaların rotalarını yöneten sınıf
 class AppRoutes {
@@ -23,6 +24,7 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String profile = '/profile';
   static const String dentalHealth = '/dental-health';
+  static const String welcome = '/welcome';
 
   // Kullanıcı profil rotaları
   static const String changePassword = '/profile/change-password';
@@ -45,6 +47,7 @@ class AppRoutes {
       forgotPassword: (context) => const ForgotPasswordScreen(),
       profile: (context) => const ProfileScreen(),
       dentalHealth: (context) => const DentalHealthScreen(),
+      welcome: (context) => const WelcomeScreen(),
 
       // Kullanıcı profil rotaları
       changePassword: (context) => const ChangePasswordScreen(),

@@ -62,8 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
 
-        // Ana sayfaya yönlendir
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        // Hoş geldiniz ekranına yönlendir
+        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
       } else {
         // Hatalı giriş
         setState(() {
