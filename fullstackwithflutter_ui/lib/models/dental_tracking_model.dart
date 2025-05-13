@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 /// Diş sağlığı takip verilerini tutan model sınıfı
 class DentalTrackingModel {

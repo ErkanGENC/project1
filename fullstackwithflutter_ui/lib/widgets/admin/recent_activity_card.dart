@@ -4,9 +4,9 @@ class RecentActivityCard extends StatelessWidget {
   final List<dynamic> activities;
 
   const RecentActivityCard({
-    Key? key,
+    super.key,
     required this.activities,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class RecentActivityCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            ...activities.map((activity) => _buildActivityItem(activity)).toList(),
+            ...activities.map((activity) => _buildActivityItem(activity)),
           ],
         ),
       ),

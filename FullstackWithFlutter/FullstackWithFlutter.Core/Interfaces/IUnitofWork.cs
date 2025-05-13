@@ -11,6 +11,7 @@ namespace FullstackWithFlutter.Core.Interfaces
         IAppUserRepository AppUsers { get; }
         IDoctorRepository Doctors { get; }
         IAppointmentRepository Appointments { get; }
+        IPasswordResetTokenRepository PasswordResetTokens { get; }
         int Complete();
     }
 }

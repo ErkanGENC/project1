@@ -17,5 +17,22 @@ namespace FullstackWithFlutter.Infrastructure
         public DbSet<AppUser> appUsers { get; set; }
         public DbSet<Doctor> doctors { get; set; }
         public DbSet<Appointment> appointments { get; set; }
+        public DbSet<PasswordResetToken> passwordResetTokens { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // PasswordResetToken tablosu için konfigürasyon
+            modelBuilder.Entity<PasswordResetToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Token).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.ExpiryDate).IsRequired();
+                entity.Property(e => e.IsUsed).IsRequired();
+                entity.Property(e => e.CreatedDate).IsRequired();
+            });
+        }
     }
 }

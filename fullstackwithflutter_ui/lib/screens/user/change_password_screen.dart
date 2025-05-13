@@ -4,7 +4,7 @@ import '../../services/api_service.dart';
 
 /// Şifre değiştirme ekranı
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({Key? key}) : super(key: key);
+  const ChangePasswordScreen({super.key});
 
   @override
   _ChangePasswordScreenState createState() => _ChangePasswordScreenState();

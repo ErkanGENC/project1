@@ -4,7 +4,7 @@ import '../../services/api_service.dart';
 import '../../models/appointment_model.dart';
 
 class AppointmentsManagement extends StatefulWidget {
-  const AppointmentsManagement({Key? key}) : super(key: key);
+  const AppointmentsManagement({super.key});
 
   @override
   _AppointmentsManagementState createState() => _AppointmentsManagementState();
@@ -103,14 +103,14 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
   }
 
   void _showAddAppointmentDialog() {
-    final _formKey = GlobalKey<FormState>();
-    final _patientController = TextEditingController();
-    final _doctorController = TextEditingController();
-    final _typeController = TextEditingController();
-    DateTime _selectedDate = DateTime.now();
-    String _selectedTime = '09:00';
+    final formKey = GlobalKey<FormState>();
+    final patientController = TextEditingController();
+    final doctorController = TextEditingController();
+    final typeController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    String selectedTime = '09:00';
 
-    final List<String> _timeSlots = [
+    final List<String> timeSlots = [
       '09:00',
       '09:30',
       '10:00',
@@ -132,13 +132,13 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
       builder: (context) => AlertDialog(
         title: const Text('Yeni Randevu Ekle'),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
-                  controller: _patientController,
+                  controller: patientController,
                   decoration: const InputDecoration(
                     labelText: 'Hasta Adı',
                     prefixIcon: Icon(Icons.person),
@@ -152,7 +152,7 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: _doctorController,
+                  controller: doctorController,
                   decoration: const InputDecoration(
                     labelText: 'Doktor Adı',
                     prefixIcon: Icon(Icons.medical_services),
@@ -166,7 +166,7 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: _typeController,
+                  controller: typeController,
                   decoration: const InputDecoration(
                     labelText: 'Randevu Türü',
                     prefixIcon: Icon(Icons.category),
@@ -183,13 +183,13 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
                   onTap: () async {
                     final DateTime? picked = await showDatePicker(
                       context: context,
-                      initialDate: _selectedDate,
+                      initialDate: selectedDate,
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null && picked != _selectedDate) {
+                    if (picked != null && picked != selectedDate) {
                       setState(() {
-                        _selectedDate = picked;
+                        selectedDate = picked;
                       });
                     }
                   },
@@ -199,18 +199,18 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
                       prefixIcon: Icon(Icons.calendar_today),
                     ),
                     child: Text(
-                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                      '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _selectedTime,
+                  value: selectedTime,
                   decoration: const InputDecoration(
                     labelText: 'Saat',
                     prefixIcon: Icon(Icons.access_time),
                   ),
-                  items: _timeSlots.map((String time) {
+                  items: timeSlots.map((String time) {
                     return DropdownMenuItem<String>(
                       value: time,
                       child: Text(time),
@@ -218,7 +218,7 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
                   }).toList(),
                   onChanged: (String? newValue) {
                     if (newValue != null) {
-                      _selectedTime = newValue;
+                      selectedTime = newValue;
                     }
                   },
                 ),
@@ -233,16 +233,16 @@ class _AppointmentsManagementState extends State<AppointmentsManagement>
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 // API'ye yeni randevu eklemek için istek at
                 final newAppointment = Appointment(
                   id: 0, // API tarafında otomatik atanacak
-                  patientName: _patientController.text,
-                  doctorName: _doctorController.text,
-                  date: _selectedDate,
-                  time: _selectedTime,
+                  patientName: patientController.text,
+                  doctorName: doctorController.text,
+                  date: selectedDate,
+                  time: selectedTime,
                   status: 'Bekleyen',
-                  type: _typeController.text,
+                  type: typeController.text,
                 );
 
                 // Yükleniyor göstergesi

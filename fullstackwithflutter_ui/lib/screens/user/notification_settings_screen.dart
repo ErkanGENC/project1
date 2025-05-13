@@ -4,7 +4,7 @@ import '../../constants/app_theme.dart';
 
 /// Bildirim ayarları ekranı
 class NotificationSettingsScreen extends StatefulWidget {
-  const NotificationSettingsScreen({Key? key}) : super(key: key);
+  const NotificationSettingsScreen({super.key});
 
   @override
   _NotificationSettingsScreenState createState() =>

@@ -15,11 +15,15 @@ namespace FullstackWithFlutter.Services
     {
         private readonly IUnitofWork _unitofWork;
         private readonly IMapper _mapper;
+        private readonly IEmailService _emailService;
+        private readonly ILogger<AuthService> _logger;
 
-        public AuthService(IUnitofWork unitofWork, IMapper mapper)
+        public AuthService(IUnitofWork unitofWork, IMapper mapper, IEmailService emailService, ILogger<AuthService> logger)
         {
             _unitofWork = unitofWork;
             _mapper = mapper;
+            _emailService = emailService;
+            _logger = logger;
         }
 
         public async Task<ApiResponse> Login(LoginViewModel loginViewModel)
@@ -276,6 +280,370 @@ namespace FullstackWithFlutter.Services
                     Data = null
                 };
             }
+        }
+
+        // Şifre sıfırlama isteği
+        public async Task<ApiResponse> ForgotPassword(string email)
+        {
+            try
+            {
+                // Kullanıcıyı email'e göre bul
+                var users = await _unitofWork.AppUsers.Find(u => u.Email == email);
+                var user = users.FirstOrDefault();
+
+                if (user == null)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Bu email adresine sahip kullanıcı bulunamadı!",
+                        Data = null
+                    };
+                }
+
+                // Kullanıcı bulundu, başarılı yanıt döndür
+                return new ApiResponse
+                {
+                    Status = true,
+                    Message = "Kullanıcı bulundu. Şifre sıfırlama işlemi için yeni şifre belirleyebilirsiniz.",
+                    Data = new
+                    {
+                        email = user.Email,
+                        userId = user.Id
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse
+                {
+                    Status = false,
+                    Message = $"Şifre sıfırlama isteği sırasında bir hata oluştu: {ex.Message}",
+                    Data = null
+                };
+            }
+        }
+
+        // Şifre sıfırlama (yeni şifre ile) - Eski metod, uyumluluk için korundu
+        public async Task<ApiResponse> ResetPassword(string email, string newPassword)
+        {
+            try
+            {
+                // Kullanıcıyı email'e göre bul
+                var users = await _unitofWork.AppUsers.Find(u => u.Email == email);
+                var user = users.FirstOrDefault();
+
+                if (user == null)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Bu email adresine sahip kullanıcı bulunamadı!",
+                        Data = null
+                    };
+                }
+
+                // Yeni şifreyi hashle ve kaydet
+                user.Password = HashPassword(newPassword);
+                user.UpdatedDate = DateTime.Now;
+                user.UpdatedBy = "API";
+
+                // Değişiklikleri kaydet
+                var result = _unitofWork.Complete();
+
+                if (result > 0)
+                {
+                    return new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Şifre başarıyla sıfırlandı!",
+                        Data = null
+                    };
+                }
+                else
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Şifre sıfırlanamadı!",
+                        Data = null
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse
+                {
+                    Status = false,
+                    Message = $"Şifre sıfırlama sırasında bir hata oluştu: {ex.Message}",
+                    Data = null
+                };
+            }
+        }
+
+        // Şifre sıfırlama e-postası gönder
+        public async Task<ApiResponse> SendPasswordResetEmail(string email)
+        {
+            try
+            {
+                // Kullanıcıyı email'e göre bul
+                var users = await _unitofWork.AppUsers.Find(u => u.Email == email);
+                var user = users.FirstOrDefault();
+
+                if (user == null)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Bu email adresine sahip kullanıcı bulunamadı!",
+                        Data = null
+                    };
+                }
+
+                // Rastgele 6 haneli kod oluştur
+                var resetCode = GenerateRandomCode(6);
+
+                // Mevcut aktif token'ı kontrol et
+                var existingToken = await _unitofWork.PasswordResetTokens.GetValidTokenByEmail(email);
+                if (existingToken != null)
+                {
+                    // Mevcut token'ı kullanılmış olarak işaretle
+                    existingToken.IsUsed = true;
+                    _unitofWork.PasswordResetTokens.Update(existingToken);
+                }
+
+                // Yeni token oluştur
+                var token = new PasswordResetToken
+                {
+                    Email = email,
+                    Token = resetCode,
+                    ExpiryDate = DateTime.Now.AddHours(1), // 1 saat geçerli
+                    IsUsed = false,
+                    CreatedDate = DateTime.Now
+                };
+
+                // Token'ı kaydet
+                await _unitofWork.PasswordResetTokens.Add(token);
+                var result = _unitofWork.Complete();
+
+                if (result <= 0)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Şifre sıfırlama kodu oluşturulamadı!",
+                        Data = null
+                    };
+                }
+
+                // E-posta gönder
+                var subject = "Şifre Sıfırlama Kodu";
+                var body = $@"
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #4CAF50; color: white; padding: 10px; text-align: center; }}
+                        .content {{ padding: 20px; border: 1px solid #ddd; }}
+                        .code {{ font-size: 24px; font-weight: bold; text-align: center; margin: 20px 0; color: #4CAF50; }}
+                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #777; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h2>Şifre Sıfırlama</h2>
+                        </div>
+                        <div class='content'>
+                            <p>Merhaba {user.FullName},</p>
+                            <p>Şifre sıfırlama talebiniz için onay kodunuz aşağıdadır:</p>
+                            <div class='code'>{resetCode}</div>
+                            <p>Bu kod 1 saat boyunca geçerlidir. Eğer bu talebi siz yapmadıysanız, lütfen bu e-postayı dikkate almayınız.</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Bu e-posta otomatik olarak gönderilmiştir, lütfen yanıtlamayınız.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+
+                try
+                {
+                    _logger.LogInformation($"E-posta gönderiliyor: To={email}, ResetCode={resetCode}");
+                    await _emailService.SendEmailAsync(email, subject, body);
+                    _logger.LogInformation($"E-posta gönderildi: To={email}");
+
+                    // Geliştirme ortamında, konsola doğrulama kodunu yazdır
+                    _logger.LogWarning($"DOĞRULAMA KODU: {resetCode} (Bu sadece geliştirme ortamında görünür)");
+                }
+                catch (System.Net.Mail.SmtpException smtpEx)
+                {
+                    _logger.LogError($"SMTP hatası ile e-posta gönderimi başarısız: {smtpEx.Message}, Status: {smtpEx.StatusCode}");
+                    if (smtpEx.InnerException != null)
+                    {
+                        _logger.LogError($"SMTP iç hata: {smtpEx.InnerException.Message}");
+                    }
+
+                    // Hatayı kullanıcıya bildir
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = $"E-posta gönderimi başarısız oldu. Lütfen daha sonra tekrar deneyin.",
+                        Data = null
+                    };
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"E-posta gönderimi sırasında hata: {ex.Message}");
+
+                    // Hatayı kullanıcıya bildir
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = $"E-posta gönderimi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+                        Data = null
+                    };
+                }
+
+                return new ApiResponse
+                {
+                    Status = true,
+                    Message = "Şifre sıfırlama kodu e-posta adresinize gönderildi. Lütfen e-postanızı kontrol ediniz.",
+                    Data = null
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Şifre sıfırlama e-postası gönderimi sırasında hata: {ex.Message}");
+                return new ApiResponse
+                {
+                    Status = false,
+                    Message = $"Şifre sıfırlama e-postası gönderimi sırasında bir hata oluştu: {ex.Message}",
+                    Data = null
+                };
+            }
+        }
+
+        // Şifre sıfırlama kodunu doğrula
+        public async Task<ApiResponse> VerifyResetCode(string email, string resetCode)
+        {
+            try
+            {
+                // Token'ı kontrol et
+                var token = await _unitofWork.PasswordResetTokens.GetTokenByEmailAndCode(email, resetCode);
+
+                if (token == null)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Geçersiz veya süresi dolmuş kod!",
+                        Data = null
+                    };
+                }
+
+                return new ApiResponse
+                {
+                    Status = true,
+                    Message = "Kod doğrulandı. Şimdi yeni şifrenizi belirleyebilirsiniz.",
+                    Data = null
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Kod doğrulama sırasında hata: {ex.Message}");
+                return new ApiResponse
+                {
+                    Status = false,
+                    Message = $"Kod doğrulama sırasında bir hata oluştu: {ex.Message}",
+                    Data = null
+                };
+            }
+        }
+
+        // Token ile şifre sıfırlama
+        public async Task<ApiResponse> ResetPasswordWithToken(string email, string resetCode, string newPassword)
+        {
+            try
+            {
+                // Token'ı kontrol et
+                var token = await _unitofWork.PasswordResetTokens.GetTokenByEmailAndCode(email, resetCode);
+
+                if (token == null)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Geçersiz veya süresi dolmuş kod!",
+                        Data = null
+                    };
+                }
+
+                // Kullanıcıyı bul
+                var users = await _unitofWork.AppUsers.Find(u => u.Email == email);
+                var user = users.FirstOrDefault();
+
+                if (user == null)
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Kullanıcı bulunamadı!",
+                        Data = null
+                    };
+                }
+
+                // Şifreyi güncelle
+                user.Password = HashPassword(newPassword);
+                user.UpdatedDate = DateTime.Now;
+                user.UpdatedBy = "API";
+
+                // Token'ı kullanılmış olarak işaretle
+                token.IsUsed = true;
+                _unitofWork.PasswordResetTokens.Update(token);
+
+                // Değişiklikleri kaydet
+                var result = _unitofWork.Complete();
+
+                if (result > 0)
+                {
+                    return new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Şifre başarıyla sıfırlandı!",
+                        Data = null
+                    };
+                }
+                else
+                {
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Şifre sıfırlanamadı!",
+                        Data = null
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Token ile şifre sıfırlama sırasında hata: {ex.Message}");
+                return new ApiResponse
+                {
+                    Status = false,
+                    Message = $"Şifre sıfırlama sırasında bir hata oluştu: {ex.Message}",
+                    Data = null
+                };
+            }
+        }
+
+        // Rastgele kod oluşturma
+        private string GenerateRandomCode(int length)
+        {
+            const string chars = "0123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
         }
     }
 }

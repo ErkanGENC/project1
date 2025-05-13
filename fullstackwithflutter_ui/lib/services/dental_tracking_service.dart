@@ -19,8 +19,21 @@ class DentalTrackingService {
       final today = DateTime.now();
       final todayDate = DateTime(today.year, today.month, today.day);
 
+      // Debug için bilgi yazdır
+      print('Searching for record for user $userId on date: $todayDate');
+      print('Total records found: ${records.length}');
+
+      // Tüm kayıtları debug için yazdır
+      for (var record in records) {
+        print('Record: userId=${record.userId}, date=${record.date}, '
+            'morningBrushing=${record.morningBrushing}, '
+            'eveningBrushing=${record.eveningBrushing}, '
+            'usedFloss=${record.usedFloss}, '
+            'usedMouthwash=${record.usedMouthwash}');
+      }
+
       // Bugüne ait kaydı bul
-      return records.firstWhere(
+      final todayRecord = records.firstWhere(
         (record) =>
             record.date.year == todayDate.year &&
             record.date.month == todayDate.month &&
@@ -33,6 +46,11 @@ class DentalTrackingService {
           usedMouthwash: false,
         ),
       );
+
+      // Debug için bulunan kaydı yazdır
+      print('Today\'s record found: ${todayRecord.id != 0 ? 'Yes' : 'No'}');
+
+      return todayRecord;
     } catch (e) {
       print('Error getting today\'s record: $e');
       return null;
@@ -69,20 +87,36 @@ class DentalTrackingService {
   // Kullanıcının tüm kayıtlarını getir
   Future<List<DentalTrackingModel>> getAllRecords(int userId) async {
     try {
+      // Debug için kullanıcı ID'sini yazdır
+      print('Getting all records for user ID: $userId');
+
       // Önce yerel depolamadan verileri al
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_storageKey);
 
       if (jsonString == null) {
+        print('No records found in SharedPreferences');
         return [];
       }
 
-      final List<dynamic> jsonList = jsonDecode(jsonString);
-      final allRecords =
-          jsonList.map((json) => DentalTrackingModel.fromJson(json)).toList();
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        print('Found ${jsonList.length} total records in SharedPreferences');
 
-      // Kullanıcıya ait kayıtları filtrele
-      return allRecords.where((record) => record.userId == userId).toList();
+        final allRecords =
+            jsonList.map((json) => DentalTrackingModel.fromJson(json)).toList();
+
+        // Kullanıcıya ait kayıtları filtrele
+        final userRecords =
+            allRecords.where((record) => record.userId == userId).toList();
+        print('Found ${userRecords.length} records for user ID: $userId');
+
+        return userRecords;
+      } catch (e) {
+        print('Error parsing records from SharedPreferences: $e');
+        // JSON ayrıştırma hatası durumunda boş liste döndür
+        return [];
+      }
     } catch (e) {
       print('Error getting all records: $e');
       return [];
@@ -92,15 +126,33 @@ class DentalTrackingService {
   // Yeni kayıt ekle veya mevcut kaydı güncelle
   Future<bool> saveRecord(DentalTrackingModel record) async {
     try {
+      // Debug için kaydedilecek kaydı yazdır
+      print('Saving record: userId=${record.userId}, date=${record.date}, '
+          'morningBrushing=${record.morningBrushing}, '
+          'eveningBrushing=${record.eveningBrushing}, '
+          'usedFloss=${record.usedFloss}, '
+          'usedMouthwash=${record.usedMouthwash}');
+
       // Tüm kayıtları getir
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_storageKey);
 
       List<DentalTrackingModel> allRecords = [];
       if (jsonString != null) {
-        final List<dynamic> jsonList = jsonDecode(jsonString);
-        allRecords =
-            jsonList.map((json) => DentalTrackingModel.fromJson(json)).toList();
+        try {
+          final List<dynamic> jsonList = jsonDecode(jsonString);
+          allRecords = jsonList
+              .map((json) => DentalTrackingModel.fromJson(json))
+              .toList();
+          print(
+              'Loaded ${allRecords.length} existing records from SharedPreferences');
+        } catch (e) {
+          print('Error parsing existing records: $e');
+          // Hatalı JSON varsa, yeni bir liste başlat
+          allRecords = [];
+        }
+      } else {
+        print('No existing records found in SharedPreferences');
       }
 
       // Aynı kullanıcı ve tarih için kayıt var mı kontrol et
@@ -109,6 +161,9 @@ class DentalTrackingService {
           r.date.year == record.date.year &&
           r.date.month == record.date.month &&
           r.date.day == record.date.day);
+
+      print(
+          'Existing record found: ${existingRecordIndex >= 0 ? 'Yes' : 'No'}');
 
       // Yeni ID oluştur
       int newId = 1;
@@ -122,13 +177,34 @@ class DentalTrackingService {
           id: allRecords[existingRecordIndex].id,
           updatedAt: DateTime.now(),
         );
+        print(
+            'Updated existing record with ID: ${allRecords[existingRecordIndex].id}');
       } else {
-        allRecords.add(record.copyWith(id: newId));
+        final newRecord = record.copyWith(id: newId);
+        allRecords.add(newRecord);
+        print('Added new record with ID: $newId');
       }
 
       // Kayıtları JSON'a dönüştür ve kaydet
       final updatedJsonList = allRecords.map((r) => r.toJson()).toList();
-      await prefs.setString(_storageKey, jsonEncode(updatedJsonList));
+      final updatedJsonString = jsonEncode(updatedJsonList);
+
+      // Debug için JSON boyutunu kontrol et
+      print('JSON size: ${updatedJsonString.length} characters');
+
+      // SharedPreferences'a kaydet
+      final saveResult = await prefs.setString(_storageKey, updatedJsonString);
+
+      print('Save result: $saveResult');
+
+      // Kaydın başarılı olduğunu doğrula
+      final verifyJsonString = prefs.getString(_storageKey);
+      if (verifyJsonString != null) {
+        final verifyList = jsonDecode(verifyJsonString) as List;
+        print('Verification: ${verifyList.length} records saved successfully');
+      } else {
+        print('Verification failed: No data found after save');
+      }
 
       return true;
     } catch (e) {

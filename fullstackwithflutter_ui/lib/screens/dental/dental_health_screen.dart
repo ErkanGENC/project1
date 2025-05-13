@@ -6,7 +6,7 @@ import '../../services/dental_tracking_service.dart';
 
 /// Ağız ve diş sağlığı takip ekranı
 class DentalHealthScreen extends StatefulWidget {
-  const DentalHealthScreen({Key? key}) : super(key: key);
+  const DentalHealthScreen({super.key});
 
   @override
   _DentalHealthScreenState createState() => _DentalHealthScreenState();
@@ -80,8 +80,12 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
           _errorMessage =
               'Kullanıcı bilgileri alınamadı. Lütfen tekrar giriş yapın.';
         });
+        print('User data could not be loaded');
         return;
       }
+
+      // Debug için kullanıcı bilgilerini yazdır
+      print('Loaded user: ID=${user.id}, Name=${user.fullName}');
 
       // Kullanıcı bilgilerini kaydet
       _currentUser = user;
@@ -89,6 +93,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
       // Bugünkü kaydı al
       final todaysRecord = await _trackingService.getTodaysRecord(user.id);
       if (todaysRecord != null) {
+        print('Today\'s record loaded successfully');
         setState(() {
           _morningBrushing = todaysRecord.morningBrushing;
           _eveningBrushing = todaysRecord.eveningBrushing;
@@ -98,10 +103,21 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
           _notes = todaysRecord.notes ?? '';
           _notesController.text = _notes;
         });
+
+        // Debug için yüklenen verileri yazdır
+        print('Loaded dental tracking data:');
+        print('- Morning Brushing: $_morningBrushing');
+        print('- Evening Brushing: $_eveningBrushing');
+        print('- Used Floss: $_usedFloss');
+        print('- Used Mouthwash: $_usedMouthwash');
+      } else {
+        print('No record found for today');
       }
 
       // Haftalık istatistikleri al
       final weeklyStats = await _trackingService.getWeeklyStats(user.id);
+      print('Weekly stats loaded: ${weeklyStats.dailyRecords.length} records');
+
       setState(() {
         _weeklyBrushing = weeklyStats.weeklyBrushing;
         _weeklyFloss = weeklyStats.weeklyFloss;
@@ -109,6 +125,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading user data: $e');
       setState(() {
         _isLoading = false;
         _errorMessage = 'Veriler yüklenirken bir hata oluştu: $e';
@@ -130,6 +147,14 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
     }
 
     try {
+      // Debug için kullanıcı bilgilerini yazdır
+      print(
+          'Current user: ID=${_currentUser!.id}, Name=${_currentUser!.fullName}');
+
+      // Bugünün tarihini al
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+
       // Yeni kayıt oluştur
       final record = DentalTrackingModel.create(
         userId: _currentUser!.id,
@@ -140,10 +165,25 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
         notes: _notes.isNotEmpty ? _notes : null,
       );
 
+      // Debug için kaydedilecek verileri yazdır
+      print('Saving dental tracking data:');
+      print('- Date: $todayDate');
+      print('- Morning Brushing: $_morningBrushing');
+      print('- Evening Brushing: $_eveningBrushing');
+      print('- Used Floss: $_usedFloss');
+      print('- Used Mouthwash: $_usedMouthwash');
+
       // Kaydı kaydet
       final success = await _trackingService.saveRecord(record);
 
       if (success) {
+        // Haftalık istatistikleri güncelle
+        await _loadUserData();
+
+        // Widget hala monte edilmiş mi kontrol et
+        if (!mounted) return;
+
+        // Başarı mesajını göster
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Günlük takip kaydedildi!'),
@@ -151,9 +191,15 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
           ),
         );
 
-        // Haftalık istatistikleri güncelle
-        await _loadUserData();
+        // Kayıt başarılı olduğunda, kullanıcıya görsel geri bildirim ver
+        setState(() {
+          // Değişiklik yok, sadece UI'ı yenile
+        });
       } else {
+        // Widget hala monte edilmiş mi kontrol et
+        if (!mounted) return;
+
+        // Hata mesajını göster
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content:
@@ -163,6 +209,12 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
         );
       }
     } catch (e) {
+      print('Error in _saveRecord: $e');
+
+      // Widget hala monte edilmiş mi kontrol et
+      if (!mounted) return;
+
+      // Hata mesajını göster
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Bir hata oluştu: $e'),
@@ -219,32 +271,32 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.error_outline,
                         color: Colors.red,
                         size: 48,
                       ),
-                      SizedBox(height: 16),
-                      Text(
+                      const SizedBox(height: 16),
+                      const Text(
                         'Bir hata oluştu',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
                           _errorMessage,
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _loadUserData,
-                        icon: Icon(Icons.refresh),
-                        label: Text('Tekrar Dene'),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Tekrar Dene'),
                       ),
                     ],
                   ),
@@ -270,7 +322,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withAlpha(25),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -524,8 +576,10 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isCompleted
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.1),
+                    ? const Color.fromRGBO(
+                        0, 128, 0, 0.1) // Colors.green with 0.1 opacity
+                    : const Color.fromRGBO(
+                        128, 128, 128, 0.1), // Colors.grey with 0.1 opacity
                 shape: BoxShape.circle,
               ),
               child: Icon(

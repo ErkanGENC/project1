@@ -43,7 +43,6 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: primaryColor,
         secondary: accentColor,
-        background: backgroundColor,
         error: errorColor,
         surface: cardColor,
       ),

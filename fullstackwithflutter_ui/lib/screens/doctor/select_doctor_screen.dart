@@ -9,10 +9,10 @@ class SelectDoctorScreen extends StatefulWidget {
   final Function(User) onDoctorSelected;
 
   const SelectDoctorScreen({
-    Key? key,
+    super.key,
     required this.user,
     required this.onDoctorSelected,
-  }) : super(key: key);
+  });
 
   @override
   _SelectDoctorScreenState createState() => _SelectDoctorScreenState();

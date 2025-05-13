@@ -9,14 +9,14 @@ class StatsCard extends StatelessWidget {
   final bool isNegative;
 
   const StatsCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
     required this.increase,
     this.isNegative = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

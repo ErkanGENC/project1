@@ -4,7 +4,7 @@ import '../../services/api_service.dart';
 import '../../widgets/admin/chart_card.dart';
 
 class ReportsPage extends StatefulWidget {
-  const ReportsPage({Key? key}) : super(key: key);
+  const ReportsPage({super.key});
 
   @override
   _ReportsPageState createState() => _ReportsPageState();

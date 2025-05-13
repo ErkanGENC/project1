@@ -10,7 +10,7 @@ class ChartCard extends StatelessWidget {
   final bool isCurrency;
 
   const ChartCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.data,
     required this.xKey,
@@ -18,7 +18,7 @@ class ChartCard extends StatelessWidget {
     required this.color,
     this.isPieChart = false,
     this.isCurrency = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

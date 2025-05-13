@@ -4,27 +4,28 @@ import '../constants/app_theme.dart';
 import '../routes/app_routes.dart';
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({Key? key}) : super(key: key);
+  const WelcomeScreen({super.key});
 
   @override
   _WelcomeScreenState createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeInAnimation;
   late Animation<double> _scaleAnimation;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Animasyon kontrolcüsünü oluştur
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    
+
     // Fade-in animasyonu
     _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -32,7 +33,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
       ),
     );
-    
+
     // Scale animasyonu
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
@@ -40,10 +41,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
-    
+
     // Animasyonu başlat
     _controller.forward();
-    
+
     // 3 saniye sonra ana sayfaya yönlendir
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
@@ -51,7 +52,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       }
     });
   }
-  
+
   @override
   void dispose() {
     _controller.dispose();
@@ -109,7 +110,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Hoş geldiniz metni
                 const Text(
                   'Ağız ve Diş Sağlığı',
@@ -131,7 +132,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Alt başlık
                 const Text(
                   'Hoş Geldiniz',
@@ -143,7 +144,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   ),
                 ),
                 const SizedBox(height: 60),
-                
+
                 // Yükleniyor indikatörü
                 const SizedBox(
                   width: 40,

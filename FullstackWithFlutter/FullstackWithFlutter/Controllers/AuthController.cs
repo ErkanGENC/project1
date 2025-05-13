@@ -129,5 +129,245 @@ namespace FullstackWithFlutter.Controllers
             }
             return 0;
         }
+
+        // Eski ForgotPassword metodu, uyumluluk için korundu
+        [HttpPost("ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation("ForgotPassword endpoint called");
+
+                if (model == null || string.IsNullOrEmpty(model.Email))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email adresi gereklidir!",
+                        Data = null
+                    });
+                }
+
+                var result = await _authService.ForgotPassword(model.Email);
+                if (result.Status)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in forgot password");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Şifre sıfırlama isteği sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        // Eski ResetPassword metodu, uyumluluk için korundu
+        [HttpPost("ResetPassword")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation("ResetPassword endpoint called");
+
+                if (model == null || string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.NewPassword))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email ve yeni şifre gereklidir!",
+                        Data = null
+                    });
+                }
+
+                var result = await _authService.ResetPassword(model.Email, model.NewPassword);
+                if (result.Status)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Şifre sıfırlama sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        // Yeni şifre sıfırlama e-postası gönderme metodu
+        [HttpPost("SendPasswordResetEmail")]
+        public async Task<IActionResult> SendPasswordResetEmail(SendPasswordResetEmailViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation("SendPasswordResetEmail endpoint called for email: {Email}", model?.Email ?? "null");
+
+                if (model == null || string.IsNullOrEmpty(model.Email))
+                {
+                    _logger.LogWarning("SendPasswordResetEmail called with null or empty email");
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email adresi gereklidir!",
+                        Data = null
+                    });
+                }
+
+                // E-posta formatını doğrula
+                if (!IsValidEmail(model.Email))
+                {
+                    _logger.LogWarning("SendPasswordResetEmail called with invalid email format: {Email}", model.Email);
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Geçerli bir e-posta adresi giriniz!",
+                        Data = null
+                    });
+                }
+
+                _logger.LogInformation("Calling AuthService.SendPasswordResetEmail for email: {Email}", model.Email);
+                var result = await _authService.SendPasswordResetEmail(model.Email);
+
+                _logger.LogInformation("AuthService.SendPasswordResetEmail result: Status={Status}, Message={Message}",
+                    result.Status, result.Message);
+
+                if (result.Status)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending password reset email: {ErrorMessage}", ex.Message);
+
+                // İç hata varsa onu da logla
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("Inner exception: {InnerErrorMessage}", ex.InnerException.Message);
+                }
+
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Şifre sıfırlama e-postası gönderimi sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        // E-posta formatını doğrulama
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Şifre sıfırlama kodunu doğrulama metodu
+        [HttpPost("VerifyResetCode")]
+        public async Task<IActionResult> VerifyResetCode(VerifyResetCodeViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation("VerifyResetCode endpoint called");
+
+                if (model == null || string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.ResetCode))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email adresi ve onay kodu gereklidir!",
+                        Data = null
+                    });
+                }
+
+                var result = await _authService.VerifyResetCode(model.Email, model.ResetCode);
+                if (result.Status)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying reset code");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Onay kodu doğrulama sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        // Token ile şifre sıfırlama metodu
+        [HttpPost("ResetPasswordWithToken")]
+        public async Task<IActionResult> ResetPasswordWithToken(ResetPasswordWithTokenViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation("ResetPasswordWithToken endpoint called");
+
+                if (model == null || string.IsNullOrEmpty(model.Email) ||
+                    string.IsNullOrEmpty(model.ResetCode) || string.IsNullOrEmpty(model.NewPassword))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email adresi, onay kodu ve yeni şifre gereklidir!",
+                        Data = null
+                    });
+                }
+
+                var result = await _authService.ResetPasswordWithToken(model.Email, model.ResetCode, model.NewPassword);
+                if (result.Status)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password with token");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Şifre sıfırlama sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
     }
 }

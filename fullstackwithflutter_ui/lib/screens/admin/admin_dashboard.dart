@@ -10,7 +10,7 @@ import 'doctors_management.dart';
 import 'reports_page.dart';
 
 class AdminDashboard extends StatefulWidget {
-  const AdminDashboard({Key? key}) : super(key: key);
+  const AdminDashboard({super.key});
 
   @override
   _AdminDashboardState createState() => _AdminDashboardState();
@@ -173,9 +173,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Drawer(
       child: Column(
         children: [
-          UserAccountsDrawerHeader(
-            accountName: const Text('Admin Kullanıcı'),
-            accountEmail: const Text('admin@example.com'),
+          const UserAccountsDrawerHeader(
+            accountName: Text('Admin Kullanıcı'),
+            accountEmail: Text('admin@example.com'),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: Text(

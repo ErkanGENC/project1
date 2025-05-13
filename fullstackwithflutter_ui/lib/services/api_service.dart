@@ -117,7 +117,7 @@ class ApiService {
 
       // Debug için token bilgisini yazdır
       print(
-          'Token for GetAllUsers: ${token != null ? (token.length > 10 ? token.substring(0, 10) + "..." : token) : "null"}');
+          'Token for GetAllUsers: ${token != null ? (token.length > 10 ? "${token.substring(0, 10)}..." : token) : "null"}');
 
       final response = await http.get(
         Uri.parse('$baseUrl/Users/GetAllUsers'),
@@ -226,14 +226,23 @@ class ApiService {
     required String password,
   }) async {
     try {
+      // Debug için login bilgilerini yazdır
+      print('Login attempt for email: $email');
+
+      final loginUrl = '$baseUrl/Auth/Login';
+      print('Login URL: $loginUrl');
+
       final response = await http.post(
-        Uri.parse('$baseUrl/Auth/Login'),
+        Uri.parse(loginUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
           'password': password,
         }),
       );
+
+      print('Login response status: ${response.statusCode}');
+      print('Login response body: ${response.body}');
 
       final Map<String, dynamic> data =
           jsonDecode(utf8.decode(response.bodyBytes));
@@ -325,9 +334,12 @@ class ApiService {
     }
   }
 
-  // Şifre sıfırlama isteği
+  // Şifre sıfırlama isteği (Eski metod, uyumluluk için korundu)
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
+      // Debug için istek bilgilerini yazdır
+      print('ForgotPassword request for email: $email');
+
       final response = await http.post(
         Uri.parse('$baseUrl/Auth/ForgotPassword'),
         headers: {'Content-Type': 'application/json'},
@@ -336,13 +348,207 @@ class ApiService {
         }),
       );
 
+      // Debug için yanıtı yazdır
+      print(
+          'ForgotPassword response: ${response.statusCode} - ${response.body}');
+
       final Map<String, dynamic> data =
           jsonDecode(utf8.decode(response.bodyBytes));
 
       if (response.statusCode == 200) {
+        // API yanıt formatını kontrol et
+        if (data.containsKey('status')) {
+          return {
+            'success': data['status'] == true,
+            'message': data['message'] ?? 'Kullanıcı bulundu',
+            'data': data['data'],
+          };
+        }
+
         return {
           'success': true,
-          'message': 'Sıfırlama bağlantısı gönderildi',
+          'message': data['message'] ?? 'Kullanıcı bulundu',
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message':
+              data['message'] ?? 'Şifre sıfırlama sırasında bir hata oluştu',
+          'data': data,
+        };
+      }
+    } catch (e) {
+      print('Error in forgotPassword: $e');
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // Şifre sıfırlama e-postası gönder (Yeni metod)
+  Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
+    try {
+      // Debug için istek bilgilerini yazdır
+      print('SendPasswordResetEmail request for email: $email');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/Auth/SendPasswordResetEmail'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      // Debug için yanıtı yazdır
+      print(
+          'SendPasswordResetEmail response: ${response.statusCode} - ${response.body}');
+
+      final Map<String, dynamic> data =
+          jsonDecode(utf8.decode(response.bodyBytes));
+
+      // Geliştirme ortamında, doğrulama kodunu konsola yazdır
+      if (data.containsKey('message') &&
+          data['message'].toString().contains('DOĞRULAMA KODU:')) {
+        final String message = data['message'].toString();
+        final RegExp regex = RegExp(r'DOĞRULAMA KODU: (\d+)');
+        final match = regex.firstMatch(message);
+        if (match != null && match.groupCount >= 1) {
+          final String code = match.group(1)!;
+          print('🔑 DOĞRULAMA KODU: $code');
+        }
+      }
+
+      if (response.statusCode == 200) {
+        // API yanıt formatını kontrol et
+        if (data.containsKey('status')) {
+          return {
+            'success': data['status'] == true,
+            'message': data['message'] ??
+                'Şifre sıfırlama kodu e-posta adresinize gönderildi',
+            'data': data['data'],
+          };
+        }
+
+        return {
+          'success': true,
+          'message': data['message'] ??
+              'Şifre sıfırlama kodu e-posta adresinize gönderildi',
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ??
+              'Şifre sıfırlama kodu gönderilirken bir hata oluştu',
+          'data': data,
+        };
+      }
+    } catch (e) {
+      print('Error in sendPasswordResetEmail: $e');
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // Şifre sıfırlama kodunu doğrula
+  Future<Map<String, dynamic>> verifyResetCode(
+      String email, String resetCode) async {
+    try {
+      // Debug için istek bilgilerini yazdır
+      print('VerifyResetCode request for email: $email, code: $resetCode');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/Auth/VerifyResetCode'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'resetCode': resetCode,
+        }),
+      );
+
+      // Debug için yanıtı yazdır
+      print(
+          'VerifyResetCode response: ${response.statusCode} - ${response.body}');
+
+      final Map<String, dynamic> data =
+          jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (response.statusCode == 200) {
+        // API yanıt formatını kontrol et
+        if (data.containsKey('status')) {
+          return {
+            'success': data['status'] == true,
+            'message': data['message'] ?? 'Kod doğrulandı',
+            'data': data['data'],
+          };
+        }
+
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Kod doğrulandı',
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Kod doğrulanırken bir hata oluştu',
+          'data': data,
+        };
+      }
+    } catch (e) {
+      print('Error in verifyResetCode: $e');
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // Şifre sıfırlama (yeni şifre ile) (Eski metod, uyumluluk için korundu)
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String newPassword,
+  }) async {
+    try {
+      // Debug için istek bilgilerini yazdır
+      print('ResetPassword request for email: $email');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/Auth/ResetPassword'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'newPassword': newPassword,
+        }),
+      );
+
+      // Debug için yanıtı yazdır
+      print(
+          'ResetPassword response: ${response.statusCode} - ${response.body}');
+
+      final Map<String, dynamic> data =
+          jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (response.statusCode == 200) {
+        // API yanıt formatını kontrol et
+        if (data.containsKey('status')) {
+          return {
+            'success': data['status'] == true,
+            'message': data['message'] ?? 'Şifre başarıyla sıfırlandı',
+            'data': data['data'],
+          };
+        }
+
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Şifre başarıyla sıfırlandı',
           'data': data,
         };
       } else {
@@ -362,28 +568,47 @@ class ApiService {
     }
   }
 
-  // Şifre sıfırlama (yeni şifre ile)
-  Future<Map<String, dynamic>> resetPassword({
+  // Token ile şifre sıfırlama (Yeni metod)
+  Future<Map<String, dynamic>> resetPasswordWithToken({
     required String email,
+    required String resetCode,
     required String newPassword,
   }) async {
     try {
+      // Debug için istek bilgilerini yazdır
+      print(
+          'ResetPasswordWithToken request for email: $email, code: $resetCode');
+
       final response = await http.post(
-        Uri.parse('$baseUrl/Auth/ResetPassword'),
+        Uri.parse('$baseUrl/Auth/ResetPasswordWithToken'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
+          'resetCode': resetCode,
           'newPassword': newPassword,
         }),
       );
+
+      // Debug için yanıtı yazdır
+      print(
+          'ResetPasswordWithToken response: ${response.statusCode} - ${response.body}');
 
       final Map<String, dynamic> data =
           jsonDecode(utf8.decode(response.bodyBytes));
 
       if (response.statusCode == 200) {
+        // API yanıt formatını kontrol et
+        if (data.containsKey('status')) {
+          return {
+            'success': data['status'] == true,
+            'message': data['message'] ?? 'Şifre başarıyla sıfırlandı',
+            'data': data['data'],
+          };
+        }
+
         return {
           'success': true,
-          'message': 'Şifre başarıyla sıfırlandı',
+          'message': data['message'] ?? 'Şifre başarıyla sıfırlandı',
           'data': data,
         };
       } else {
@@ -395,6 +620,7 @@ class ApiService {
         };
       }
     } catch (e) {
+      print('Error in resetPasswordWithToken: $e');
       return {
         'success': false,
         'message': 'API bağlantı hatası: $e',
@@ -414,7 +640,7 @@ class ApiService {
 
       // Debug için token bilgisini yazdır
       print(
-          'Token for ChangePassword: ${token != null ? (token.length > 10 ? token.substring(0, 10) + "..." : token) : "null"}');
+          'Token for ChangePassword: ${token != null ? (token.length > 10 ? "${token.substring(0, 10)}..." : token) : "null"}');
 
       if (token == null) {
         print('ChangePassword: Token bulunamadı');

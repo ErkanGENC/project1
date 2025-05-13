@@ -4,7 +4,7 @@ import '../../services/api_service.dart';
 import '../../models/doctor_model.dart';
 
 class DoctorsManagement extends StatefulWidget {
-  const DoctorsManagement({Key? key}) : super(key: key);
+  const DoctorsManagement({super.key});
 
   @override
   _DoctorsManagementState createState() => _DoctorsManagementState();
@@ -577,9 +577,9 @@ class _DoctorsManagementState extends State<DoctorsManagement> {
                                 margin: const EdgeInsets.symmetric(
                                     horizontal: 16, vertical: 8),
                                 child: ListTile(
-                                  leading: CircleAvatar(
+                                  leading: const CircleAvatar(
                                     backgroundColor: AppTheme.primaryColor,
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.medical_services,
                                       color: Colors.white,
                                       size: 20,

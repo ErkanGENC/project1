@@ -9,17 +9,20 @@ namespace FullstackWithFlutter.Infrastructure.Repositories
         public IAppUserRepository AppUsers { get; }
         public IDoctorRepository Doctors { get; }
         public IAppointmentRepository Appointments { get; }
+        public IPasswordResetTokenRepository PasswordResetTokens { get; }
 
         public UnitofWork(
             ApplicationDbContext applicationDbContext,
             IAppUserRepository appUserRepository,
             IDoctorRepository doctorRepository,
-            IAppointmentRepository appointmentRepository)
+            IAppointmentRepository appointmentRepository,
+            IPasswordResetTokenRepository passwordResetTokenRepository)
         {
             _dbContext = applicationDbContext;
             AppUsers = appUserRepository;
             Doctors = doctorRepository;
             Appointments = appointmentRepository;
+            PasswordResetTokens = passwordResetTokenRepository;
         }
 
         public int Complete()

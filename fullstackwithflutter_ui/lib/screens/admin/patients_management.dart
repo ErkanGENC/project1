@@ -4,7 +4,7 @@ import '../../models/user_model.dart';
 import '../../services/api_service.dart';
 
 class PatientsManagement extends StatefulWidget {
-  const PatientsManagement({Key? key}) : super(key: key);
+  const PatientsManagement({super.key});
 
   @override
   _PatientsManagementState createState() => _PatientsManagementState();
@@ -61,22 +61,22 @@ class _PatientsManagementState extends State<PatientsManagement> {
   }
 
   void _showAddPatientDialog() {
-    final _formKey = GlobalKey<FormState>();
-    final _nameController = TextEditingController();
-    final _emailController = TextEditingController();
-    final _phoneController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final phoneController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Yeni Hasta Ekle'),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                controller: _nameController,
+                controller: nameController,
                 decoration: const InputDecoration(
                   labelText: 'Ad Soyad',
                   prefixIcon: Icon(Icons.person),
@@ -90,7 +90,7 @@ class _PatientsManagementState extends State<PatientsManagement> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _emailController,
+                controller: emailController,
                 decoration: const InputDecoration(
                   labelText: 'E-posta',
                   prefixIcon: Icon(Icons.email),
@@ -108,7 +108,7 @@ class _PatientsManagementState extends State<PatientsManagement> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _phoneController,
+                controller: phoneController,
                 decoration: const InputDecoration(
                   labelText: 'Telefon',
                   prefixIcon: Icon(Icons.phone),
@@ -130,7 +130,7 @@ class _PatientsManagementState extends State<PatientsManagement> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 // Yükleniyor göstergesi
                 showDialog(
                   context: context,
@@ -143,9 +143,9 @@ class _PatientsManagementState extends State<PatientsManagement> {
                 // Yeni hasta oluştur
                 final newPatient = User(
                   id: 0, // API tarafında otomatik atanacak
-                  fullName: _nameController.text,
-                  email: _emailController.text,
-                  phoneNumber: _phoneController.text,
+                  fullName: nameController.text,
+                  email: emailController.text,
+                  phoneNumber: phoneController.text,
                 );
 
                 // API'ye hasta ekleme isteği gönder
@@ -186,22 +186,22 @@ class _PatientsManagementState extends State<PatientsManagement> {
   }
 
   void _showEditPatientDialog(User patient) {
-    final _formKey = GlobalKey<FormState>();
-    final _nameController = TextEditingController(text: patient.fullName);
-    final _emailController = TextEditingController(text: patient.email);
-    final _phoneController = TextEditingController(text: patient.phoneNumber);
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: patient.fullName);
+    final emailController = TextEditingController(text: patient.email);
+    final phoneController = TextEditingController(text: patient.phoneNumber);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hasta Düzenle'),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                controller: _nameController,
+                controller: nameController,
                 decoration: const InputDecoration(
                   labelText: 'Ad Soyad',
                   prefixIcon: Icon(Icons.person),
@@ -215,7 +215,7 @@ class _PatientsManagementState extends State<PatientsManagement> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _emailController,
+                controller: emailController,
                 decoration: const InputDecoration(
                   labelText: 'E-posta',
                   prefixIcon: Icon(Icons.email),
@@ -233,7 +233,7 @@ class _PatientsManagementState extends State<PatientsManagement> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _phoneController,
+                controller: phoneController,
                 decoration: const InputDecoration(
                   labelText: 'Telefon',
                   prefixIcon: Icon(Icons.phone),
@@ -255,7 +255,7 @@ class _PatientsManagementState extends State<PatientsManagement> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 // Yükleniyor göstergesi
                 showDialog(
                   context: context,
@@ -268,9 +268,9 @@ class _PatientsManagementState extends State<PatientsManagement> {
                 // Güncellenmiş hasta bilgileri
                 final updatedPatient = User(
                   id: patient.id,
-                  fullName: _nameController.text,
-                  email: _emailController.text,
-                  phoneNumber: _phoneController.text,
+                  fullName: nameController.text,
+                  email: emailController.text,
+                  phoneNumber: phoneController.text,
                 );
 
                 // API'ye hasta güncelleme isteği gönder

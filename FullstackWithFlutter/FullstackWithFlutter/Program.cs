@@ -59,6 +59,7 @@ public class Program
         builder.Services.AddScoped<IDoctorService, DoctorService>();
         builder.Services.AddScoped<IAppointmentService, AppointmentService>();
         builder.Services.AddScoped<IReportService, ReportService>();
+        builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddEndpointsApiExplorer();
 
         // Add logging
