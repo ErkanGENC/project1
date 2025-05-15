@@ -38,7 +38,7 @@ class RecentActivityCard extends StatelessWidget {
   Widget _buildActivityItem(Map<String, dynamic> activity) {
     final IconData icon = activity['icon'] ?? Icons.info_outline;
     final Color color = activity['color'] ?? Colors.blue;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -47,7 +47,7 @@ class RecentActivityCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withAlpha(25), // 0.1 * 255 = 25
               shape: BoxShape.circle,
             ),
             child: Icon(

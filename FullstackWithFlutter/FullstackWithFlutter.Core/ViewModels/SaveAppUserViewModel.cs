@@ -8,6 +8,9 @@
         public string? MobileNumber { get; set; }
         public DateTime? BirthDate { get; set; }
 
+        // Kullanıcı rolü: user, doctor, admin
+        public string? Role { get; set; }
+
         // Doktor bilgileri
         public int? DoctorId { get; set; }
         public string? DoctorName { get; set; }

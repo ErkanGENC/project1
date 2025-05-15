@@ -62,8 +62,81 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
 
-        // Hoş geldiniz ekranına yönlendir
-        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        // Kullanıcı rolünü kontrol et
+        if (result['data'] != null && result['data']['user'] != null) {
+          final userData = result['data']['user'];
+          String role = 'user'; // Varsayılan rol
+
+          // Debug için kullanıcı bilgilerini yazdır
+          print('Login userData: $userData');
+          print('Login result data: ${result['data']}');
+
+          // Rol belirleme öncelik sırası:
+          // 1. API'den gelen rol bilgisi (en yüksek öncelik)
+          // 2. Doktor ID'si veya doktor adı kontrolü
+          // 3. İsim içinde "doktor" kelimesi kontrolü
+
+          // 1. API'den gelen rol bilgisini kontrol et (en yüksek öncelik)
+          if (userData['role'] != null &&
+              userData['role'].toString().isNotEmpty) {
+            role = userData['role'].toString().toLowerCase();
+            print('API\'den gelen rol: $role');
+          }
+          // 2. Doktor ID'si veya doktor adı varsa doktor rolü
+          // doctorId 0 olsa bile doktor olarak kabul et
+          else if ((userData['doctorId'] != null) ||
+              (userData['doctorName'] != null &&
+                  userData['doctorName'].toString().isNotEmpty)) {
+            role = 'doctor';
+            print(
+                'Doktor bilgileri bulundu: doctorId=${userData['doctorId']}, doctorName=${userData['doctorName']}');
+          }
+          // 3. Kullanıcı adı "doktor" içeriyorsa doktor rolü ver (geçici çözüm)
+          else if (userData['fullName'] != null &&
+              userData['fullName']
+                  .toString()
+                  .toLowerCase()
+                  .contains('doktor')) {
+            role = 'doctor';
+            print('İsimden doktor rolü tespit edildi: ${userData['fullName']}');
+          }
+
+          // Rol bilgisini debug için yazdır
+          print('Login ekranında belirlenen rol: $role');
+
+          print('Belirlenen rol: $role');
+
+          // Role göre yönlendirme yap
+          if (role == 'doctor') {
+            // Doktor paneline yönlendir
+            print(
+                'Doktor rolü tespit edildi, doktor paneline yönlendiriliyor...');
+
+            // Doktor dashboard'ına yönlendir
+            Navigator.pushReplacementNamed(context, AppRoutes.doctorDashboard);
+
+            // Yönlendirme başarısız olursa, hata mesajı göster
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Doktor paneline yönlendiriliyor...'),
+                backgroundColor: Colors.blue,
+              ),
+            );
+          } else if (role == 'admin') {
+            // Admin paneline yönlendir
+            print(
+                'Admin rolü tespit edildi, admin paneline yönlendiriliyor...');
+            Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
+          } else {
+            // Normal kullanıcı - Hoş geldiniz ekranına yönlendir
+            print(
+                'Normal kullanıcı rolü tespit edildi, hoş geldiniz ekranına yönlendiriliyor...');
+            Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+          }
+        } else {
+          // Kullanıcı bilgisi yoksa varsayılan olarak hoş geldiniz ekranına yönlendir
+          Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        }
       } else {
         // Hatalı giriş
         setState(() {

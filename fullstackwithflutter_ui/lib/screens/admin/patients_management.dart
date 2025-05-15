@@ -31,7 +31,13 @@ class _PatientsManagementState extends State<PatientsManagement> {
     });
 
     try {
-      final patients = await _apiService.getAllUsers();
+      final allUsers = await _apiService.getAllUsers();
+
+      // Sadece normal kullanıcıları (hastaları) filtrele
+      final patients = allUsers
+          .where((user) => user.role != 'doctor' && user.role != 'admin')
+          .toList();
+
       setState(() {
         _patients = patients;
         _filteredPatients = patients;

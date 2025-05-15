@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../models/doctor_model.dart';
+import 'create_doctor_user.dart';
 
 class DoctorsManagement extends StatefulWidget {
   const DoctorsManagement({super.key});
@@ -518,6 +519,7 @@ class _DoctorsManagementState extends State<DoctorsManagement> {
                   ),
                 ),
                 const SizedBox(width: 16),
+                // Yeni Doktor Ekle butonu
                 ElevatedButton.icon(
                   onPressed: _showAddDoctorDialog,
                   icon: const Icon(Icons.add),
@@ -525,6 +527,27 @@ class _DoctorsManagementState extends State<DoctorsManagement> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Doktor Kullanıcısı Oluştur butonu
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CreateDoctorUserScreen(),
+                      ),
+                    ).then((_) =>
+                        _fetchDoctors()); // Geri dönüldüğünde listeyi yenile
+                  },
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Doktor Kullanıcısı Oluştur'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
                   ),
                 ),
               ],
@@ -599,8 +622,10 @@ class _DoctorsManagementState extends State<DoctorsManagement> {
                                             horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: doctor.isAvailable
-                                              ? Colors.green.withOpacity(0.1)
-                                              : Colors.red.withOpacity(0.1),
+                                              ? Colors.green.withAlpha(
+                                                  25) // 0.1 * 255 = 25
+                                              : Colors.red.withAlpha(
+                                                  25), // 0.1 * 255 = 25
                                           borderRadius:
                                               BorderRadius.circular(12),
                                         ),

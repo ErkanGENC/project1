@@ -35,59 +35,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     });
 
     try {
-      // Gerçek uygulamada, API'den dashboard verilerini alacaksınız
-      // Şimdilik örnek veriler kullanıyoruz
-      await Future.delayed(
-          const Duration(seconds: 1)); // API çağrısı simülasyonu
+      // API'den dashboard verilerini al
+      final dashboardData = await _apiService.getDashboardData();
 
       setState(() {
-        _dashboardData = {
-          'totalPatients': 256,
-          'activePatients': 187,
-          'todayAppointments': 24,
-          'pendingAppointments': 12,
-          'totalDoctors': 8,
-          'totalRevenue': 45750,
-          'recentActivities': [
-            {
-              'id': 1,
-              'type': 'appointment',
-              'title': 'Yeni Randevu',
-              'description':
-                  'Ayşe Yılmaz için diş kontrolü randevusu oluşturuldu',
-              'time': '10 dakika önce',
-              'icon': Icons.calendar_today,
-              'color': AppTheme.primaryColor,
-            },
-            {
-              'id': 2,
-              'type': 'patient',
-              'title': 'Yeni Hasta',
-              'description': 'Mehmet Demir sisteme kaydedildi',
-              'time': '45 dakika önce',
-              'icon': Icons.person_add,
-              'color': AppTheme.accentColor,
-            },
-            {
-              'id': 3,
-              'type': 'treatment',
-              'title': 'Tedavi Tamamlandı',
-              'description': 'Ali Kaya\'nın kanal tedavisi tamamlandı',
-              'time': '1 saat önce',
-              'icon': Icons.medical_services,
-              'color': AppTheme.successColor,
-            },
-            {
-              'id': 4,
-              'type': 'payment',
-              'title': 'Ödeme Alındı',
-              'description': 'Zeynep Şahin\'den 1.250₺ ödeme alındı',
-              'time': '3 saat önce',
-              'icon': Icons.payment,
-              'color': Colors.purple,
-            },
-          ],
-        };
+        _dashboardData = dashboardData;
         _isLoading = false;
       });
     } catch (e) {
@@ -314,20 +266,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Expanded(
                 child: StatsCard(
                   title: 'Toplam Hasta',
-                  value: _dashboardData['totalPatients'].toString(),
+                  value: _dashboardData['totalPatients']?.toString() ?? '0',
                   icon: Icons.people,
                   color: AppTheme.primaryColor,
-                  increase: '+12%',
+                  increase: _dashboardData['totalPatientsChange'] ?? '+0%',
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: StatsCard(
                   title: 'Bugünkü Randevular',
-                  value: _dashboardData['todayAppointments'].toString(),
+                  value: _dashboardData['todayAppointments']?.toString() ?? '0',
                   icon: Icons.calendar_today,
                   color: AppTheme.accentColor,
-                  increase: '+5%',
+                  increase: _dashboardData['todayAppointmentsChange'] ?? '+0%',
                 ),
               ),
             ],
@@ -338,21 +290,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Expanded(
                 child: StatsCard(
                   title: 'Aktif Hastalar',
-                  value: _dashboardData['activePatients'].toString(),
+                  value: _dashboardData['activePatients']?.toString() ?? '0',
                   icon: Icons.person,
                   color: AppTheme.successColor,
-                  increase: '+8%',
+                  increase: _dashboardData['activePatientsChange'] ?? '+0%',
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: StatsCard(
                   title: 'Bekleyen Randevular',
-                  value: _dashboardData['pendingAppointments'].toString(),
+                  value:
+                      _dashboardData['pendingAppointments']?.toString() ?? '0',
                   icon: Icons.pending_actions,
                   color: AppTheme.warningColor,
-                  increase: '-3%',
-                  isNegative: true,
+                  increase:
+                      _dashboardData['pendingAppointmentsChange'] ?? '+0%',
+                  isNegative:
+                      (_dashboardData['pendingAppointmentsChange'] ?? '+0%')
+                          .startsWith('-'),
                 ),
               ),
             ],
@@ -452,7 +408,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(height: 16),
 
           // Son Aktiviteler
-          RecentActivityCard(activities: _dashboardData['recentActivities']),
+          if (_dashboardData.containsKey('recentActivities') &&
+              _dashboardData['recentActivities'] is List &&
+              (_dashboardData['recentActivities'] as List).isNotEmpty)
+            RecentActivityCard(activities: _dashboardData['recentActivities'])
+          else
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(
+                    child: Text(
+                      'Henüz aktivite bulunmamaktadır',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

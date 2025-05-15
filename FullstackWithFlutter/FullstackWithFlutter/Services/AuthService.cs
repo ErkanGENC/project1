@@ -110,6 +110,23 @@ namespace FullstackWithFlutter.Services
                     newUser.BirthDate = userViewModel.BirthDate;
                 }
 
+                // Rol kontrolü
+                if (string.IsNullOrEmpty(userViewModel.Role))
+                {
+                    // Varsayılan rol: user
+                    newUser.Role = "user";
+                }
+                else
+                {
+                    newUser.Role = userViewModel.Role;
+                }
+
+                // Doktor bilgileri varsa, rolü doctor olarak ayarla
+                if (userViewModel.DoctorId.HasValue || !string.IsNullOrEmpty(userViewModel.DoctorName))
+                {
+                    newUser.Role = "doctor";
+                }
+
                 // Şifreyi hashle
                 newUser.Password = HashPassword(userViewModel.Password);
 
@@ -131,10 +148,21 @@ namespace FullstackWithFlutter.Services
                     // ek bir işlem yapmaya gerek yok. Kullanıcı zaten hasta olarak kaydedilmiş oluyor.
                     // Eğer ayrı bir Patient tablosu olsaydı, burada ek işlem yapılması gerekirdi.
 
+                    // Rol bilgisine göre farklı mesaj döndür
+                    string successMessage;
+                    if (newUser.Role == "doctor")
+                    {
+                        successMessage = "Kayıt başarılı! Doktor kullanıcısı oluşturuldu.";
+                    }
+                    else
+                    {
+                        successMessage = "Kayıt başarılı! Kullanıcı otomatik olarak hasta olarak eklendi.";
+                    }
+
                     return new ApiResponse
                     {
                         Status = true,
-                        Message = "Kayıt başarılı! Kullanıcı otomatik olarak hasta olarak eklendi.",
+                        Message = successMessage,
                         Data = new
                         {
                             user = registeredUserViewModel,
@@ -185,13 +213,29 @@ namespace FullstackWithFlutter.Services
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             // Token içeriğindeki bilgiler (claims)
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim("userId", user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email ?? ""),
                 new Claim(ClaimTypes.Name, user.FullName ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+
+            // Rol bilgisini ekle
+            if (!string.IsNullOrEmpty(user.Role))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, user.Role));
+            }
+            else if (user.DoctorId.HasValue || !string.IsNullOrEmpty(user.DoctorName))
+            {
+                // Doktor bilgileri varsa, doctor rolü ekle
+                claims.Add(new Claim(ClaimTypes.Role, "doctor"));
+            }
+            else
+            {
+                // Varsayılan rol: user
+                claims.Add(new Claim(ClaimTypes.Role, "user"));
+            }
 
             // Token oluştur
             var token = new JwtSecurityToken(

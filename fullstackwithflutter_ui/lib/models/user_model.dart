@@ -8,6 +8,7 @@ class User {
   final int? doctorId;
   final String? doctorName;
   final String? specialization;
+  final String role; // Kullanıcı rolü: 'user', 'doctor', 'admin'
 
   User({
     required this.id,
@@ -19,6 +20,7 @@ class User {
     this.doctorId,
     this.doctorName,
     this.specialization,
+    this.role = 'user', // Varsayılan rol: user
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -57,6 +59,19 @@ class User {
     doctorName = json['doctorName'] ?? json['doctor_name'];
     specialization = json['specialization'] ?? json['doctor_specialization'];
 
+    // Rol bilgisini kontrol et
+    String role = 'user'; // Varsayılan rol
+
+    // Eğer doctorId varsa ve null değilse, bu kullanıcı bir doktor
+    if (doctorId != null) {
+      role = 'doctor';
+    }
+
+    // API'den gelen rol bilgisini kontrol et
+    if (json['role'] != null) {
+      role = json['role'];
+    }
+
     return User(
       id: json['id'] ?? json['userId'] ?? json['user_id'] ?? 0,
       fullName:
@@ -72,6 +87,7 @@ class User {
       doctorId: doctorId,
       doctorName: doctorName,
       specialization: specialization,
+      role: role,
     );
   }
 
@@ -86,6 +102,7 @@ class User {
       if (doctorId != null) 'doctorId': doctorId,
       if (doctorName != null) 'doctorName': doctorName,
       if (specialization != null) 'specialization': specialization,
+      'role': role,
     };
   }
 }
