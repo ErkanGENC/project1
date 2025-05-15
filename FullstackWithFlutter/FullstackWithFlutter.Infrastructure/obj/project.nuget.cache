@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "M415cQWA3sY=",
+  "dgSpecHash": "pPwn26U/Ca8=",
   "success": true,
   "projectFilePath": "C:\\Users\\gence\\OneDrive\\Masaüstü\\project1\\FullstackWithFlutter\\FullstackWithFlutter.Infrastructure\\FullstackWithFlutter.Infrastructure.csproj",
   "expectedPackageFiles": [
@@ -77,7 +77,10 @@
     "C:\\Users\\gence\\.nuget\\packages\\system.threading\\4.3.0\\system.threading.4.3.0.nupkg.sha512",
     "C:\\Users\\gence\\.nuget\\packages\\system.threading.tasks\\4.3.0\\system.threading.tasks.4.3.0.nupkg.sha512",
     "C:\\Users\\gence\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
-    "C:\\Users\\gence\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512"
+    "C:\\Users\\gence\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512",
+    "C:\\Users\\gence\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.16\\microsoft.netcore.app.ref.8.0.16.nupkg.sha512",
+    "C:\\Users\\gence\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.16\\microsoft.windowsdesktop.app.ref.8.0.16.nupkg.sha512",
+    "C:\\Users\\gence\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.16\\microsoft.aspnetcore.app.ref.8.0.16.nupkg.sha512"
   ],
   "logs": []
 }

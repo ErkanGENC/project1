@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
+import '../models/doctor_model.dart';
 import '../constants/app_theme.dart';
 import '../screens/doctor/select_doctor_screen.dart';
+import '../models/appointment_model.dart';
+import '../services/api_service.dart';
 
 class UserListItem extends StatelessWidget {
   final User user;
@@ -174,7 +177,8 @@ class UserListItem extends StatelessWidget {
                         size: 20,
                       ),
                       onPressed: () {
-                        // Randevu oluştur
+                        // Randevu oluşturma ekranını aç
+                        _showAddAppointmentDialog(context);
                       },
                       tooltip: 'Randevu Oluştur',
                       constraints: const BoxConstraints(
@@ -228,6 +232,276 @@ class UserListItem extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Randevu oluşturma diyaloğunu göster
+  void _showAddAppointmentDialog(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    final patientController = TextEditingController(text: user.fullName);
+    final typeController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    String selectedTime = '09:00';
+    final ApiService apiService = ApiService();
+
+    // Doktor listesi ve seçilen doktor
+    List<Doctor> doctors = [];
+    Doctor? selectedDoctor;
+
+    final List<String> timeSlots = [
+      '09:00',
+      '09:30',
+      '10:00',
+      '10:30',
+      '11:00',
+      '11:30',
+      '13:00',
+      '13:30',
+      '14:00',
+      '14:30',
+      '15:00',
+      '15:30',
+      '16:00',
+      '16:30'
+    ];
+
+    // StatefulBuilder kullanarak doktor seçildiğinde UI'ı güncelleyebiliriz
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          // Dialog açıldığında doktorları getir
+          if (doctors.isEmpty) {
+            apiService.getAllDoctors().then((doctorList) {
+              setState(() {
+                doctors = doctorList;
+                // Eğer hastanın bir doktoru varsa, o doktoru seç
+                if (user.doctorId != null && user.doctorName != null) {
+                  try {
+                    selectedDoctor = doctors.firstWhere(
+                      (doctor) => doctor.id == user.doctorId,
+                    );
+                  } catch (e) {
+                    // Eğer doktor bulunamazsa, varsayılan bir doktor oluştur
+                    selectedDoctor = Doctor(
+                      id: user.doctorId!,
+                      name: user.doctorName!,
+                      specialization: user.specialization ?? 'Belirtilmemiş',
+                      email: '',
+                      phoneNumber: '',
+                    );
+                  }
+                  // Randevu türünü doktorun uzmanlık alanına göre ayarla
+                  typeController.text = selectedDoctor?.specialization ?? '';
+                }
+              });
+            }).catchError((e) {
+              // Hata durumunda işlem yapma
+            });
+          }
+
+          return AlertDialog(
+            title: const Text('Yeni Randevu Ekle'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: patientController,
+                      decoration: const InputDecoration(
+                        labelText: 'Hasta Adı',
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Lütfen hasta adı girin';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Doktor seçimi için dropdown
+                    DropdownButtonFormField<Doctor>(
+                      value: selectedDoctor,
+                      decoration: const InputDecoration(
+                        labelText: 'Doktor Adı',
+                        prefixIcon: Icon(Icons.medical_services),
+                      ),
+                      hint: const Text('Doktor Seçin'),
+                      isExpanded: true,
+                      items: doctors.map((Doctor doctor) {
+                        return DropdownMenuItem<Doctor>(
+                          value: doctor,
+                          child:
+                              Text('${doctor.name} (${doctor.specialization})'),
+                        );
+                      }).toList(),
+                      onChanged: (Doctor? newValue) {
+                        setState(() {
+                          selectedDoctor = newValue;
+                          // Doktor seçildiğinde randevu türünü otomatik doldur
+                          if (newValue != null) {
+                            typeController.text = newValue.specialization;
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Lütfen doktor seçin';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: typeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Randevu Türü',
+                        prefixIcon: Icon(Icons.category),
+                        // Salt okunur olduğunu belirtmek için arka plan rengini değiştir
+                        fillColor: Color(0xFFF5F5F5),
+                        filled: true,
+                      ),
+                      // Salt okunur yap
+                      enabled: false,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Lütfen randevu türü girin';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null && picked != selectedDate) {
+                          setState(() {
+                            selectedDate = picked;
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Tarih',
+                          prefixIcon: Icon(Icons.calendar_today),
+                        ),
+                        child: Text(
+                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedTime,
+                      decoration: const InputDecoration(
+                        labelText: 'Saat',
+                        prefixIcon: Icon(Icons.access_time),
+                      ),
+                      items: timeSlots.map((String time) {
+                        return DropdownMenuItem<String>(
+                          value: time,
+                          child: Text(time),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            selectedTime = newValue;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('İptal'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    // API'ye yeni randevu eklemek için istek at
+                    final newAppointment = Appointment(
+                      id: 0, // API tarafında otomatik atanacak
+                      patientName: patientController.text,
+                      doctorName: selectedDoctor?.name ?? '',
+                      date: selectedDate,
+                      time: selectedTime,
+                      status: 'Bekleyen',
+                      type: typeController.text,
+                    );
+
+                    // Yükleniyor göstergesi
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (loadingContext) =>
+                          const Center(child: CircularProgressIndicator()),
+                    );
+
+                    try {
+                      // API'ye istek at
+                      final result =
+                          await apiService.addAppointment(newAppointment);
+
+                      // Mounted kontrolü
+                      if (!context.mounted) return;
+
+                      // Yükleniyor göstergesini kapat
+                      Navigator.pop(context);
+                      Navigator.pop(context); // Dialog'u kapat
+
+                      if (result['success']) {
+                        // Başarılı ise bildirim göster
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(result['message']),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        // Hata durumunda
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(result['message']),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      // Hata durumunda
+                      if (!context.mounted) return;
+
+                      // Yükleniyor göstergesini kapat
+                      Navigator.pop(context);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Bir hata oluştu: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Ekle'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

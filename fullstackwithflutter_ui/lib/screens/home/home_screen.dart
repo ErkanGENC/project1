@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
+import '../../models/appointment_model.dart';
 import '../../services/api_service.dart';
 import '../../constants/app_theme.dart';
 import '../../widgets/user_list_item.dart';
@@ -17,6 +18,8 @@ class _HomeScreenState extends State<HomeScreen>
   final ApiService _apiService = ApiService();
   List<User> _users = [];
   List<User> _filteredUsers = [];
+  List<Appointment> _appointments = [];
+  List<String> _patientsWithAppointments = [];
   bool _isLoading = true;
   String _errorMessage = '';
   String _searchQuery = '';
@@ -96,15 +99,18 @@ class _HomeScreenState extends State<HomeScreen>
           }).toList();
           break;
         case 3: // Randevulu Hastalar - Randevusu olan kullanıcılar
-          // Burada gerçek randevu verisi olmadığı için,
-          // örnek olarak ID'si 5'in katı olan kullanıcıları gösteriyoruz
-          // Gerçek uygulamada, randevusu olan kullanıcıları API'den almalısınız
-          categoryFiltered = _users.where((user) => user.id % 5 == 0).toList();
-          break;
+          // Gerçek randevu verilerine göre filtreleme yapacağız
+          // Önce tüm randevuları alıp, hasta adlarını bir listeye ekleyeceğiz
+          _fetchAppointmentsForFilter();
+          return; // Filtreleme _fetchAppointmentsForFilter içinde yapılıyor
         case 4: // Doktor Atanmış Hastalar
           categoryFiltered = _users
-              .where((user) => user.doctorId != null && user.doctorName != null)
+              .where((user) =>
+                  user.doctorId != null &&
+                  user.doctorName != null &&
+                  user.doctorName!.isNotEmpty)
               .toList();
+
           break;
       }
     }
@@ -126,6 +132,42 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // Randevuları getir ve randevulu hastaları filtrele
+  Future<void> _fetchAppointmentsForFilter() async {
+    try {
+      // Tüm randevuları al
+      final appointments = await _apiService.getAllAppointments();
+
+      // Randevusu olan hastaların adlarını bir listeye ekle
+      final patientsWithAppointments = appointments
+          .map((appointment) => appointment.patientName)
+          .toSet() // Tekrar eden isimleri kaldır
+          .toList();
+
+      setState(() {
+        _appointments = appointments;
+        _patientsWithAppointments = patientsWithAppointments;
+
+        // Randevusu olan kullanıcıları filtrele
+        // Tam eşleşme yaparak sadece gerçekten randevusu olan hastaları göster
+        _filteredUsers = _users.where((user) {
+          // Kullanıcının tam adı randevulu hastalar listesinde var mı kontrol et
+          return patientsWithAppointments.contains(user.fullName);
+        }).toList();
+
+        // TabBar'ı güncelle
+        setState(() {});
+      });
+    } catch (e) {
+      // Hata durumunda sessizce devam et
+      // Hata durumunda boş liste göster
+      setState(() {
+        _filteredUsers = [];
+        _patientsWithAppointments = [];
+      });
+    }
+  }
+
   Future<void> _fetchUsers() async {
     try {
       final users = await _apiService.getAllUsers();
@@ -137,6 +179,14 @@ class _HomeScreenState extends State<HomeScreen>
           _isLoading = false;
           _errorMessage = ''; // Hata mesajını temizle
         });
+
+        // Kullanıcılar yüklendikten sonra randevuları da yükle
+        if (_selectedCategoryIndex == 3) {
+          _fetchAppointmentsForFilter();
+        } else {
+          // TabBar'ı güncelle
+          setState(() {});
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -172,6 +222,146 @@ class _HomeScreenState extends State<HomeScreen>
       _searchQuery = query;
       _filterUsers(); // Arama sorgusuna göre filtreleme yap
     });
+  }
+
+  // Her sekme için hasta sayısını hesaplayıp tab widget'ları oluştur
+  List<Widget> _buildTabsWithCount() {
+    List<Widget> tabs = [];
+
+    // Tüm hastalar
+    tabs.add(Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_categories[0]),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${_users.length}',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    ));
+
+    // Aktif hastalar (son 30 gün)
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final activePatients = _users
+        .where((user) =>
+            user.createdDate != null &&
+            user.createdDate!.isAfter(thirtyDaysAgo))
+        .length;
+
+    tabs.add(Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_categories[1]),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$activePatients',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    ));
+
+    // Yeni hastalar (son 7 gün)
+    final oneWeekAgo = now.subtract(const Duration(days: 7));
+    final newPatients = _users
+        .where((user) =>
+            user.createdDate != null && user.createdDate!.isAfter(oneWeekAgo))
+        .length;
+
+    tabs.add(Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_categories[2]),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$newPatients',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    ));
+
+    // Randevulu hastalar
+    final appointmentPatients = _patientsWithAppointments.length;
+
+    tabs.add(Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_categories[3]),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$appointmentPatients',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    ));
+
+    // Doktor atanmış hastalar
+    final doctorAssignedPatients = _users
+        .where((user) =>
+            user.doctorId != null &&
+            user.doctorName != null &&
+            user.doctorName!.isNotEmpty)
+        .length;
+
+    tabs.add(Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_categories[4]),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$doctorAssignedPatients',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    ));
+
+    return tabs;
   }
 
   // Seçili alt gezinme öğesi
@@ -228,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen>
             controller: _tabController,
             isScrollable: true,
             indicatorColor: Colors.white,
-            tabs: _categories.map((category) => Tab(text: category)).toList(),
+            tabs: _buildTabsWithCount(),
           ),
         ),
       ),
