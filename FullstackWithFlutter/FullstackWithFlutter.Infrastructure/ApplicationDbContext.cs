@@ -18,6 +18,7 @@ namespace FullstackWithFlutter.Infrastructure
         public DbSet<Doctor> doctors { get; set; }
         public DbSet<Appointment> appointments { get; set; }
         public DbSet<PasswordResetToken> passwordResetTokens { get; set; }
+        public DbSet<Activity> activities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

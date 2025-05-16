@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
+import '../../models/activity.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin/dashboard_card.dart';
 import '../../widgets/admin/recent_activity_card.dart';
@@ -21,11 +22,13 @@ class AdminDashboardState extends State<AdminDashboard> {
   bool _isLoading = true;
   String _errorMessage = '';
   Map<String, dynamic> _dashboardData = {};
+  List<Activity> _activities = [];
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _loadActivities();
   }
 
   Future<void> _loadDashboardData() async {
@@ -47,6 +50,19 @@ class AdminDashboardState extends State<AdminDashboard> {
         _errorMessage = 'Veri yüklenirken bir hata oluştu: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadActivities() async {
+    try {
+      // API'den aktivite verilerini al
+      final activities = await _apiService.getRecentActivities(10);
+
+      setState(() {
+        _activities = activities;
+      });
+    } catch (e) {
+      print('Aktiviteler yüklenirken bir hata oluştu: $e');
     }
   }
 
@@ -77,7 +93,10 @@ class AdminDashboardState extends State<AdminDashboard> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadDashboardData,
+            onPressed: () {
+              _loadDashboardData();
+              _loadActivities();
+            },
             tooltip: 'Yenile',
           ),
         ],
@@ -110,7 +129,10 @@ class AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
-                        onPressed: _loadDashboardData,
+                        onPressed: () {
+                          _loadDashboardData();
+                          _loadActivities();
+                        },
                         icon: const Icon(Icons.refresh),
                         label: const Text('Tekrar Dene'),
                       ),
@@ -408,28 +430,7 @@ class AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(height: 16),
 
           // Son Aktiviteler
-          if (_dashboardData.containsKey('recentActivities') &&
-              _dashboardData['recentActivities'] is List &&
-              (_dashboardData['recentActivities'] as List).isNotEmpty)
-            RecentActivityCard(activities: _dashboardData['recentActivities'])
-          else
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(
-                    child: Text(
-                      'Henüz aktivite bulunmamaktadır',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          RecentActivityCard(activities: _activities),
         ],
       ),
     );

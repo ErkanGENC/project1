@@ -17,13 +17,15 @@ namespace FullstackWithFlutter.Services
         private readonly IMapper _mapper;
         private readonly IEmailService _emailService;
         private readonly ILogger<AuthService> _logger;
+        private readonly IActivityService _activityService;
 
-        public AuthService(IUnitofWork unitofWork, IMapper mapper, IEmailService emailService, ILogger<AuthService> logger)
+        public AuthService(IUnitofWork unitofWork, IMapper mapper, IEmailService emailService, ILogger<AuthService> logger, IActivityService activityService)
         {
             _unitofWork = unitofWork;
             _mapper = mapper;
             _emailService = emailService;
             _logger = logger;
+            _activityService = activityService;
         }
 
         public async Task<ApiResponse> Login(LoginViewModel loginViewModel)
@@ -52,6 +54,14 @@ namespace FullstackWithFlutter.Services
 
                     // JWT token oluştur
                     var token = GenerateJwtToken(user);
+
+                    // Aktivite kaydı
+                    await _activityService.LogUserActivity(
+                        type: "UserLogin",
+                        description: $"{user.FullName} kullanıcısı giriş yaptı",
+                        userId: user.Id,
+                        userName: user.FullName
+                    );
 
                     return new ApiResponse
                     {
@@ -113,6 +123,15 @@ namespace FullstackWithFlutter.Services
 
                     // JWT token oluştur
                     var token = GenerateJwtToken(doctorUser);
+
+                    // Aktivite kaydı
+                    await _activityService.LogDoctorActivity(
+                        type: "DoctorLogin",
+                        description: $"{doctor.Name} doktoru giriş yaptı",
+                        userId: doctor.Id,
+                        userName: doctor.Name,
+                        doctorId: doctor.Id
+                    );
 
                     return new ApiResponse
                     {
@@ -178,6 +197,14 @@ namespace FullstackWithFlutter.Services
 
                     // Kullanıcı bilgilerini döndür
                     var registeredUserViewModel = _mapper.Map<AppUserViewModel>(newUser);
+
+                    // Aktivite kaydı
+                    await _activityService.LogUserActivity(
+                        type: "UserRegistration",
+                        description: $"Yeni kullanıcı kaydı: {newUser.FullName}",
+                        userId: newUser.Id,
+                        userName: newUser.FullName
+                    );
 
                     // Kullanıcıyı otomatik olarak hasta olarak ekle
                     // Burada kullanıcı zaten AppUser tablosuna eklendiği için

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
 import '../models/doctor_model.dart';
 import '../models/appointment_model.dart';
+import '../models/activity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -1445,6 +1446,108 @@ class ApiService {
       print('Error in getDashboardData: $e');
       // API bağlantısı başarısız olursa örnek veriler dön
       return _getDefaultDashboardData();
+    }
+  }
+
+  // Aktiviteleri al
+  Future<List<Activity>> getActivities() async {
+    try {
+      // Token'i al (eğer varsa)
+      final token = await getToken();
+
+      // Debug için token bilgisini yazdır
+      print(
+          'Token for getActivities: ${token != null ? (token.length > 10 ? "${token.substring(0, 10)}..." : token) : "null"}');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/Activity'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      // Debug için yanıtı yazdır
+      print('getActivities response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+        print('getActivities decoded data: $decodedData');
+
+        // API'den gelen veri bir nesne ise
+        if (decodedData is Map) {
+          if (decodedData.containsKey('data') &&
+              decodedData['status'] == true) {
+            final data = decodedData['data'];
+
+            if (data is List) {
+              return data.map((item) => Activity.fromJson(item)).toList();
+            }
+          }
+        }
+
+        // Boş veri dönerse boş liste dön
+        return [];
+      } else {
+        print('API request failed with status code: ${response.statusCode}');
+        // API bağlantısı başarısız olursa boş liste dön
+        return [];
+      }
+    } catch (e) {
+      print('Error in getActivities: $e');
+      // API bağlantısı başarısız olursa boş liste dön
+      return [];
+    }
+  }
+
+  // Son aktiviteleri al
+  Future<List<Activity>> getRecentActivities(int count) async {
+    try {
+      // Token'i al (eğer varsa)
+      final token = await getToken();
+
+      // Debug için token bilgisini yazdır
+      print(
+          'Token for getRecentActivities: ${token != null ? (token.length > 10 ? "${token.substring(0, 10)}..." : token) : "null"}');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/Activity/recent/$count'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      // Debug için yanıtı yazdır
+      print('getRecentActivities response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+        print('getRecentActivities decoded data: $decodedData');
+
+        // API'den gelen veri bir nesne ise
+        if (decodedData is Map) {
+          if (decodedData.containsKey('data') &&
+              decodedData['status'] == true) {
+            final data = decodedData['data'];
+
+            if (data is List) {
+              return data.map((item) => Activity.fromJson(item)).toList();
+            }
+          }
+        }
+
+        // Boş veri dönerse boş liste dön
+        return [];
+      } else {
+        print('API request failed with status code: ${response.statusCode}');
+        // API bağlantısı başarısız olursa boş liste dön
+        return [];
+      }
+    } catch (e) {
+      print('Error in getRecentActivities: $e');
+      // API bağlantısı başarısız olursa boş liste dön
+      return [];
     }
   }
 
