@@ -17,6 +17,7 @@ import '../screens/welcome_screen.dart';
 import '../screens/doctor/doctor_dashboard.dart';
 import '../screens/doctor/doctor_appointments_screen.dart';
 import '../screens/doctor/doctor_patients_screen.dart';
+import '../screens/appointment/create_appointment_screen.dart';
 
 /// Uygulama içindeki tüm sayfaların rotalarını yöneten sınıf
 class AppRoutes {
@@ -28,6 +29,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String dentalHealth = '/dental-health';
   static const String welcome = '/welcome';
+  static const String createAppointment = '/create-appointment';
 
   // Doktor rotaları
   static const String doctorDashboard = '/doctor-dashboard';
@@ -56,6 +58,7 @@ class AppRoutes {
       profile: (context) => const ProfileScreen(),
       dentalHealth: (context) => const DentalHealthScreen(),
       welcome: (context) => const WelcomeScreen(),
+      createAppointment: (context) => const CreateAppointmentScreen(),
 
       // Kullanıcı profil rotaları
       changePassword: (context) => const ChangePasswordScreen(),

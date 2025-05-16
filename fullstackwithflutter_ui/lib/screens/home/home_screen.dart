@@ -4,16 +4,19 @@ import '../../models/appointment_model.dart';
 import '../../services/api_service.dart';
 import '../../constants/app_theme.dart';
 import '../../widgets/user_list_item.dart';
+import '../../widgets/home/user_dashboard.dart';
 import '../../routes/app_routes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  HomeScreenState createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final ApiService _apiService = ApiService();
   List<User> _users = [];
   List<User> _filteredUsers = [];
@@ -31,10 +34,72 @@ class _HomeScreenState extends State<HomeScreen> {
   // 4: Doktor Atanmış Hastalar (Bir doktora atanmış hastalar)
   int _selectedCategoryIndex = 0;
 
+  // Mevcut kullanıcı
+  User? _currentUser;
+  // Yaklaşan randevular
+  List<Appointment> _upcomingAppointments = [];
+  // Seçili sekme indeksi
+  int _selectedTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _selectedTabIndex = _tabController.index;
+      });
+    });
     _fetchUsers();
+    _fetchCurrentUser();
+    _fetchUpcomingAppointments();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  // Mevcut kullanıcı bilgilerini getir
+  Future<void> _fetchCurrentUser() async {
+    try {
+      final result = await _apiService.getCurrentUser();
+
+      if (result['success'] && result['data'] != null) {
+        setState(() {
+          _currentUser = User.fromJson(result['data']);
+        });
+      }
+    } catch (e) {
+      // Hata durumunda sessizce devam et
+    }
+  }
+
+  // Yaklaşan randevuları getir
+  Future<void> _fetchUpcomingAppointments() async {
+    try {
+      final appointments = await _apiService.getAllAppointments();
+
+      // Bugün ve sonrası için olan randevuları filtrele
+      final now = DateTime.now();
+      final upcoming = appointments
+          .where((appointment) =>
+              appointment.date.isAfter(now) ||
+              (appointment.date.year == now.year &&
+                  appointment.date.month == now.month &&
+                  appointment.date.day == now.day))
+          .toList();
+
+      // Tarihe göre sırala
+      upcoming.sort((a, b) => a.date.compareTo(b.date));
+
+      setState(() {
+        _upcomingAppointments = upcoming;
+      });
+    } catch (e) {
+      // Hata durumunda sessizce devam et
+    }
   }
 
   // Kullanıcıları filtrele
@@ -469,36 +534,94 @@ class _HomeScreenState extends State<HomeScreen> {
                 _errorMessage = '';
               });
               _fetchUsers();
+              _fetchCurrentUser();
+              _fetchUpcomingAppointments();
             },
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Ana Sayfa'),
+            Tab(text: 'Hastalar'),
+          ],
+        ),
       ),
       drawer: _buildDrawer(),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // Arama çubuğu
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              onChanged: _updateSearchQuery,
-              decoration: InputDecoration(
-                hintText: 'Hasta ara...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide.none,
+          // Ana Sayfa Sekmesi
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: UserDashboard(
+                    currentUser: _currentUser,
+                    upcomingAppointments: _upcomingAppointments,
+                    onRefresh: () {
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      _fetchCurrentUser();
+                      _fetchUpcomingAppointments();
+                      setState(() {
+                        _isLoading = false;
+                      });
+                    },
+                  ),
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(vertical: 0.0),
+
+          // Hastalar Sekmesi
+          Column(
+            children: [
+              // Arama çubuğu
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
+                  onChanged: _updateSearchQuery,
+                  decoration: InputDecoration(
+                    hintText: 'Hasta ara...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0.0),
+                  ),
+                ),
               ),
-            ),
+              // Liste içeriği
+              Expanded(child: _buildBody()),
+            ],
           ),
-          // Liste içeriği
-          Expanded(child: _buildBody()),
         ],
       ),
-      // Hasta ekleme butonu ve alt gezinme çubuğu kaldırıldı - drawer menüsünde aynı seçenekler mevcut
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedTabIndex,
+        onTap: (index) {
+          _tabController.animateTo(index);
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Ana Sayfa',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people),
+            label: 'Hastalar',
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Randevu oluşturma ekranını aç
+          Navigator.pushNamed(context, AppRoutes.createAppointment);
+        },
+        tooltip: 'Randevu Oluştur',
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
