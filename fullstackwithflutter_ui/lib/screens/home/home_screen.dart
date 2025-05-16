@@ -13,8 +13,7 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
   List<User> _users = [];
   List<User> _filteredUsers = [];
@@ -23,42 +22,19 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isLoading = true;
   String _errorMessage = '';
   String _searchQuery = '';
-  late TabController _tabController;
 
-  // Kategori filtreleri için
-  final List<String> _categories = [
-    'Tümü',
-    'Aktif Hastalar',
-    'Yeni Hastalar',
-    'Randevulu Hastalar',
-    'Doktor Atanmış Hastalar'
-  ];
+  // Kategori indeksi
+  // 0: Tümü
+  // 1: Aktif Hastalar (Son 30 gün içinde randevusu olan hastalar)
+  // 2: Yeni Hastalar (Son 7 gün içinde kaydedilmiş hastalar)
+  // 3: Randevulu Hastalar (Herhangi bir zamanda randevusu olan hastalar)
+  // 4: Doktor Atanmış Hastalar (Bir doktora atanmış hastalar)
   int _selectedCategoryIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // Tab controller'ı başlat
-    _tabController = TabController(length: _categories.length, vsync: this);
-    _tabController.addListener(_handleTabSelection);
     _fetchUsers();
-  }
-
-  @override
-  void dispose() {
-    // Controller'ı temizle
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  // Tab değişikliğini dinle
-  void _handleTabSelection() {
-    if (_tabController.indexIsChanging) {
-      setState(() {
-        _selectedCategoryIndex = _tabController.index;
-        _filterUsers();
-      });
-    }
   }
 
   // Kullanıcıları filtrele
@@ -79,16 +55,10 @@ class _HomeScreenState extends State<HomeScreen>
       final oneWeekAgo = now.subtract(const Duration(days: 7));
 
       switch (_selectedCategoryIndex) {
-        case 1: // Aktif Hastalar - Son 30 gün içinde kaydedilmiş kullanıcılar
-          final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-          categoryFiltered = _users.where((user) {
-            // Kullanıcının kayıt tarihi varsa ve son 30 gün içindeyse
-            if (user.createdDate != null) {
-              return user.createdDate!.isAfter(thirtyDaysAgo);
-            }
-            return false;
-          }).toList();
-          break;
+        case 1: // Aktif Hastalar - Son 30 gün içinde randevusu olan hastalar
+          // Randevuları getir ve son 30 gün içinde randevusu olan hastaları filtrele
+          _fetchActivePatients();
+          return; // Filtreleme _fetchActivePatients içinde yapılıyor
         case 2: // Yeni Hastalar - Son 7 gün içinde kaydedilmiş kullanıcılar
           categoryFiltered = _users.where((user) {
             // Kullanıcının kayıt tarihi varsa ve son 7 gün içindeyse
@@ -168,20 +138,63 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // Aktif hastaları getir (son 30 gün içinde randevusu olanlar)
+  Future<void> _fetchActivePatients() async {
+    try {
+      // Tüm randevuları al
+      final appointments = await _apiService.getAllAppointments();
+
+      // Son 30 gün içindeki randevuları filtrele
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      final recentAppointments = appointments
+          .where((appointment) => appointment.date.isAfter(thirtyDaysAgo))
+          .toList();
+
+      // Son 30 gün içinde randevusu olan hastaların adlarını bir listeye ekle
+      final activePatientNames = recentAppointments
+          .map((appointment) => appointment.patientName)
+          .toSet() // Tekrar eden isimleri kaldır
+          .toList();
+
+      setState(() {
+        // Son 30 gün içinde randevusu olan kullanıcıları filtrele
+        _filteredUsers = _users.where((user) {
+          // Kullanıcının tam adı aktif hastalar listesinde var mı kontrol et
+          return activePatientNames.contains(user.fullName);
+        }).toList();
+
+        // TabBar'ı güncelle
+        setState(() {});
+      });
+    } catch (e) {
+      // Hata durumunda sessizce devam et
+      // Hata durumunda boş liste göster
+      setState(() {
+        _filteredUsers = [];
+      });
+    }
+  }
+
   Future<void> _fetchUsers() async {
     try {
       final users = await _apiService.getAllUsers();
 
+      // Tüm randevuları da yükle
+      final appointments = await _apiService.getAllAppointments();
+
       if (mounted) {
         setState(() {
           _users = users;
+          _appointments = appointments;
           _filteredUsers = users; // Başlangıçta tüm kullanıcıları göster
           _isLoading = false;
           _errorMessage = ''; // Hata mesajını temizle
         });
 
-        // Kullanıcılar yüklendikten sonra randevuları da yükle
-        if (_selectedCategoryIndex == 3) {
+        // Seçili kategoriye göre filtreleme yap
+        if (_selectedCategoryIndex == 1) {
+          _fetchActivePatients();
+        } else if (_selectedCategoryIndex == 3) {
           _fetchAppointmentsForFilter();
         } else {
           // TabBar'ı güncelle
@@ -224,168 +237,222 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  // Her sekme için hasta sayısını hesaplayıp tab widget'ları oluştur
-  List<Widget> _buildTabsWithCount() {
-    List<Widget> tabs = [];
+  // Alt gezinme çubuğu kaldırıldı - drawer menüsünde aynı seçenekler mevcut
 
-    // Tüm hastalar
-    tabs.add(Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+  // Drawer menüsünü oluştur
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
-          Text(_categories[0]),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          const DrawerHeader(
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
-              borderRadius: BorderRadius.circular(10),
+              color: AppTheme.primaryColor,
             ),
-            child: Text(
-              '${_users.length}',
-              style: const TextStyle(fontSize: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.person,
+                    size: 40,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Hasta Paneli',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Ağız ve Diş Sağlığı Takip',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.people),
+            title: Row(
+              children: [
+                const Text('Tümü'),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_users.length}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            selected: _selectedCategoryIndex == 0,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedCategoryIndex = 0;
+                _filterUsers();
+              });
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: Row(
+              children: [
+                const Text('Aktif Hastalar'),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_appointments.where((a) => a.date.isAfter(DateTime.now().subtract(const Duration(days: 30)))).map((a) => a.patientName).toSet().length}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            selected: _selectedCategoryIndex == 1,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedCategoryIndex = 1;
+                _filterUsers();
+              });
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_add),
+            title: Row(
+              children: [
+                const Text('Yeni Hastalar'),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_users.where((user) => user.createdDate != null && user.createdDate!.isAfter(DateTime.now().subtract(const Duration(days: 7)))).length}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            selected: _selectedCategoryIndex == 2,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedCategoryIndex = 2;
+                _filterUsers();
+              });
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: Row(
+              children: [
+                const Text('Randevulu Hastalar'),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_patientsWithAppointments.length}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            selected: _selectedCategoryIndex == 3,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedCategoryIndex = 3;
+                _filterUsers();
+              });
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.medical_services),
+            title: Row(
+              children: [
+                const Text('Doktor Atanmış Hastalar'),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_users.where((user) => user.doctorId != null && user.doctorName != null && user.doctorName!.isNotEmpty).length}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            selected: _selectedCategoryIndex == 4,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedCategoryIndex = 4;
+                _filterUsers();
+              });
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.medical_services),
+            title: const Text('Diş Sağlığı'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.dentalHealth);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('Profil'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.profile);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings),
+            title: const Text('Admin Paneli'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.adminDashboard);
+            },
           ),
         ],
       ),
-    ));
-
-    // Aktif hastalar (son 30 gün)
-    final now = DateTime.now();
-    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-    final activePatients = _users
-        .where((user) =>
-            user.createdDate != null &&
-            user.createdDate!.isAfter(thirtyDaysAgo))
-        .length;
-
-    tabs.add(Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(_categories[1]),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$activePatients',
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    ));
-
-    // Yeni hastalar (son 7 gün)
-    final oneWeekAgo = now.subtract(const Duration(days: 7));
-    final newPatients = _users
-        .where((user) =>
-            user.createdDate != null && user.createdDate!.isAfter(oneWeekAgo))
-        .length;
-
-    tabs.add(Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(_categories[2]),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$newPatients',
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    ));
-
-    // Randevulu hastalar
-    final appointmentPatients = _patientsWithAppointments.length;
-
-    tabs.add(Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(_categories[3]),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$appointmentPatients',
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    ));
-
-    // Doktor atanmış hastalar
-    final doctorAssignedPatients = _users
-        .where((user) =>
-            user.doctorId != null &&
-            user.doctorName != null &&
-            user.doctorName!.isNotEmpty)
-        .length;
-
-    tabs.add(Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(_categories[4]),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$doctorAssignedPatients',
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    ));
-
-    return tabs;
-  }
-
-  // Seçili alt gezinme öğesi
-  int _selectedIndex = 0;
-
-  // Alt gezinme öğelerine tıklandığında çağrılan fonksiyon
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return; // Zaten seçili ise bir şey yapma
-
-    switch (index) {
-      case 0: // Ana Sayfa
-        // Zaten ana sayfadayız, bir şey yapma
-        break;
-      case 1: // Ağız ve Diş Sağlığı
-        Navigator.pushNamed(context, AppRoutes.dentalHealth);
-        return; // return ile fonksiyondan çık
-      case 2: // Profil
-        Navigator.pushNamed(context, AppRoutes.profile);
-        return; // return ile fonksiyondan çık
-    }
-
-    setState(() {
-      _selectedIndex = index;
-    });
+    );
   }
 
   @override
@@ -394,13 +461,6 @@ class _HomeScreenState extends State<HomeScreen>
       appBar: AppBar(
         title: const Text('Ağız ve Diş Sağlığı Takip'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.adminDashboard);
-            },
-            tooltip: 'Admin Paneli',
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
@@ -412,16 +472,8 @@ class _HomeScreenState extends State<HomeScreen>
             },
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48.0),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            indicatorColor: Colors.white,
-            tabs: _buildTabsWithCount(),
-          ),
-        ),
       ),
+      drawer: _buildDrawer(),
       body: Column(
         children: [
           // Arama çubuğu
@@ -446,27 +498,7 @@ class _HomeScreenState extends State<HomeScreen>
           Expanded(child: _buildBody()),
         ],
       ),
-      // Hasta ekleme butonu kaldırıldı - kullanıcılar kayıt olduklarında otomatik olarak hasta olarak kaydedilir
-      // Alt gezinme çubuğu
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Ana Sayfa',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.medical_services),
-            label: 'Diş Sağlığı',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: AppTheme.primaryColor,
-        onTap: _onItemTapped,
-      ),
+      // Hasta ekleme butonu ve alt gezinme çubuğu kaldırıldı - drawer menüsünde aynı seçenekler mevcut
     );
   }
 

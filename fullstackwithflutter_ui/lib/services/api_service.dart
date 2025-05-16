@@ -1371,113 +1371,95 @@ class ApiService {
       // Token'i al (eğer varsa)
       final token = await getToken();
 
+      // Debug için token bilgisini yazdır
+      print(
+          'Token for getDashboardData: ${token != null ? (token.length > 10 ? "${token.substring(0, 10)}..." : token) : "null"}');
+
       final response = await http.get(
-        Uri.parse('$baseUrl/Admin/GetDashboardData'),
+        Uri.parse('$baseUrl/Admin/dashboard'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
 
+      // Debug için yanıtı yazdır
+      print('getDashboardData response: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+        print('getDashboardData decoded data: $decodedData');
 
         // API'den gelen veri bir nesne ise
         if (decodedData is Map) {
-          if (decodedData.containsKey('data')) {
-            return decodedData['data'] as Map<String, dynamic>;
+          if (decodedData.containsKey('data') &&
+              decodedData['status'] == true) {
+            final data = decodedData['data'];
+            print('Dashboard data from API: $data');
+
+            // Yüzde işaretlerini ekle
+            final result = {
+              'totalPatients': data['totalPatients'] ?? 0,
+              'totalPatientsChange': data['totalPatientsPercentage'] != null
+                  ? (data['totalPatientsPercentage'] >= 0
+                      ? '+${data['totalPatientsPercentage']}%'
+                      : '${data['totalPatientsPercentage']}%')
+                  : '+0%',
+              'todayAppointments': data['todayAppointments'] ?? 0,
+              'todayAppointmentsChange':
+                  data['todayAppointmentsPercentage'] != null
+                      ? (data['todayAppointmentsPercentage'] >= 0
+                          ? '+${data['todayAppointmentsPercentage']}%'
+                          : '${data['todayAppointmentsPercentage']}%')
+                      : '+0%',
+              'activePatients': data['activePatients'] ?? 0,
+              'activePatientsChange': data['activePatientsPercentage'] != null
+                  ? (data['activePatientsPercentage'] >= 0
+                      ? '+${data['activePatientsPercentage']}%'
+                      : '${data['activePatientsPercentage']}%')
+                  : '+0%',
+              'pendingAppointments': data['pendingAppointments'] ?? 0,
+              'pendingAppointmentsChange':
+                  data['pendingAppointmentsPercentage'] != null
+                      ? (data['pendingAppointmentsPercentage'] >= 0
+                          ? '+${data['pendingAppointmentsPercentage']}%'
+                          : '${data['pendingAppointmentsPercentage']}%')
+                      : '+0%',
+            };
+
+            print('Formatted dashboard data: $result');
+            return result;
           }
-          return decodedData as Map<String, dynamic>;
         }
 
+        print(
+            'API response format is not as expected, returning default values');
         // Boş veri dönerse varsayılan değerler oluştur
-        return {
-          'totalPatients': 0,
-          'todayAppointments': 0,
-          'activePatients': 0,
-          'pendingAppointments': 0,
-          'recentActivities': [],
-        };
+        return _getDefaultDashboardData();
       } else {
+        print('API request failed with status code: ${response.statusCode}');
         // API bağlantısı başarısız olursa örnek veriler dön
-        return {
-          'totalPatients': 256,
-          'totalPatientsChange': '+12%',
-          'todayAppointments': 15,
-          'todayAppointmentsChange': '+5%',
-          'activePatients': 187,
-          'activePatientsChange': '+8%',
-          'pendingAppointments': 24,
-          'pendingAppointmentsChange': '-3%',
-          'recentActivities': [
-            {
-              'id': 1,
-              'type': 'appointment',
-              'title': 'Yeni Randevu',
-              'description':
-                  'Ahmet Yılmaz için diş kontrolü randevusu oluşturuldu',
-              'date': DateTime.now().subtract(const Duration(hours: 2)),
-              'status': 'created',
-            },
-            {
-              'id': 2,
-              'type': 'patient',
-              'title': 'Yeni Hasta',
-              'description': 'Ayşe Demir sisteme yeni hasta olarak kaydedildi',
-              'date': DateTime.now().subtract(const Duration(hours: 5)),
-              'status': 'registered',
-            },
-            {
-              'id': 3,
-              'type': 'appointment',
-              'title': 'Randevu Tamamlandı',
-              'description': 'Mehmet Öz\'ün diş tedavisi randevusu tamamlandı',
-              'date': DateTime.now().subtract(const Duration(hours: 8)),
-              'status': 'completed',
-            },
-          ],
-        };
+        return _getDefaultDashboardData();
       }
     } catch (e) {
+      print('Error in getDashboardData: $e');
       // API bağlantısı başarısız olursa örnek veriler dön
-      return {
-        'totalPatients': 256,
-        'totalPatientsChange': '+12%',
-        'todayAppointments': 15,
-        'todayAppointmentsChange': '+5%',
-        'activePatients': 187,
-        'activePatientsChange': '+8%',
-        'pendingAppointments': 24,
-        'pendingAppointmentsChange': '-3%',
-        'recentActivities': [
-          {
-            'id': 1,
-            'type': 'appointment',
-            'title': 'Yeni Randevu',
-            'description':
-                'Ahmet Yılmaz için diş kontrolü randevusu oluşturuldu',
-            'date': DateTime.now().subtract(const Duration(hours: 2)),
-            'status': 'created',
-          },
-          {
-            'id': 2,
-            'type': 'patient',
-            'title': 'Yeni Hasta',
-            'description': 'Ayşe Demir sisteme yeni hasta olarak kaydedildi',
-            'date': DateTime.now().subtract(const Duration(hours: 5)),
-            'status': 'registered',
-          },
-          {
-            'id': 3,
-            'type': 'appointment',
-            'title': 'Randevu Tamamlandı',
-            'description': 'Mehmet Öz\'ün diş tedavisi randevusu tamamlandı',
-            'date': DateTime.now().subtract(const Duration(hours: 8)),
-            'status': 'completed',
-          },
-        ],
-      };
+      return _getDefaultDashboardData();
     }
+  }
+
+  // Varsayılan dashboard verileri
+  Map<String, dynamic> _getDefaultDashboardData() {
+    return {
+      'totalPatients': 0,
+      'totalPatientsChange': '+0%',
+      'todayAppointments': 0,
+      'todayAppointmentsChange': '+0%',
+      'activePatients': 0,
+      'activePatientsChange': '+0%',
+      'pendingAppointments': 0,
+      'pendingAppointmentsChange': '+0%',
+    };
   }
 
   // Tüm doktorları getir

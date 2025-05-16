@@ -191,7 +191,7 @@ class LoginScreenState extends State<LoginScreen> {
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Logo ve başlık
                   const Icon(
@@ -214,56 +214,62 @@ class LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 48),
 
                   // E-posta alanı
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'E-posta',
-                      hintText: 'ornek@mail.com',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'E-posta',
+                        hintText: 'ornek@mail.com',
+                        prefixIcon: Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Lütfen e-posta adresinizi girin';
+                        }
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(value)) {
+                          return 'Geçerli bir e-posta adresi girin';
+                        }
+                        return null;
+                      },
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Lütfen e-posta adresinizi girin';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                          .hasMatch(value)) {
-                        return 'Geçerli bir e-posta adresi girin';
-                      }
-                      return null;
-                    },
                   ),
                   const SizedBox(height: 16),
 
                   // Şifre alanı
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: 'Şifre',
-                      hintText: '********',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility_off
-                              : Icons.visibility,
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextFormField(
+                      controller: _passwordController,
+                      obscureText: !_isPasswordVisible,
+                      decoration: InputDecoration(
+                        labelText: 'Şifre',
+                        hintText: '********',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
+                        border: const OutlineInputBorder(),
                       ),
-                      border: const OutlineInputBorder(),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Lütfen şifrenizi girin';
+                        }
+                        return null;
+                      },
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Lütfen şifrenizi girin';
-                      }
-                      return null;
-                    },
                   ),
                   const SizedBox(height: 8),
 
@@ -271,18 +277,26 @@ class LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _rememberMe,
-                            onChanged: (value) {
-                              setState(() {
-                                _rememberMe = value ?? false;
-                              });
-                            },
-                          ),
-                          const Text('Beni hatırla'),
-                        ],
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Checkbox(
+                              value: _rememberMe,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rememberMe = value ?? false;
+                                });
+                              },
+                            ),
+                            const Flexible(
+                              child: Text(
+                                'Beni hatırla',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       TextButton(
                         onPressed: () {
@@ -296,32 +310,41 @@ class LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
 
                   // Giriş butonu
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Giriş Yap',
+                              style: TextStyle(fontSize: 16),
                             ),
-                          )
-                        : const Text(
-                            'Giriş Yap',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
                   // Kayıt ol yönlendirmesi
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Hesabınız yok mu?'),
+                      const Flexible(
+                        child: Text(
+                          'Hesabınız yok mu?',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       TextButton(
                         onPressed: () {
                           Navigator.pushNamed(context, AppRoutes.register);
