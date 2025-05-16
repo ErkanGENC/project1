@@ -15,6 +15,8 @@ import '../screens/admin/doctors_management.dart';
 import '../screens/admin/reports_page.dart';
 import '../screens/welcome_screen.dart';
 import '../screens/doctor/doctor_dashboard.dart';
+import '../screens/doctor/doctor_appointments_screen.dart';
+import '../screens/doctor/doctor_patients_screen.dart';
 
 /// Uygulama içindeki tüm sayfaların rotalarını yöneten sınıf
 class AppRoutes {
@@ -69,9 +71,8 @@ class AppRoutes {
 
       // Doktor rotaları
       doctorDashboard: (context) => const DoctorDashboard(),
-      // Henüz oluşturulmadı, gerektiğinde eklenecek
-      // doctorAppointments: (context) => const DoctorAppointmentsScreen(),
-      // doctorPatients: (context) => const DoctorPatientsScreen(),
+      doctorAppointments: (context) => const DoctorAppointmentsScreen(),
+      doctorPatients: (context) => const DoctorPatientsScreen(),
     };
   }
 }

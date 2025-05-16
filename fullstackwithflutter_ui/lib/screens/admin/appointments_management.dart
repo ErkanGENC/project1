@@ -7,10 +7,10 @@ class AppointmentsManagement extends StatefulWidget {
   const AppointmentsManagement({super.key});
 
   @override
-  _AppointmentsManagementState createState() => _AppointmentsManagementState();
+  AppointmentsManagementState createState() => AppointmentsManagementState();
 }
 
-class _AppointmentsManagementState extends State<AppointmentsManagement>
+class AppointmentsManagementState extends State<AppointmentsManagement>
     with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   List<Appointment> _appointments = [];

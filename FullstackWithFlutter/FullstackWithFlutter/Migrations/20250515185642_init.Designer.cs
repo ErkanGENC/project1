@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FullstackWithFlutter.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250515172040_addRoleToAppUser")]
-    partial class addRoleToAppUser
+    [Migration("20250515185642_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

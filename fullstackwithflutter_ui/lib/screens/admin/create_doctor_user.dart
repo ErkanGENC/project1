@@ -8,10 +8,10 @@ class CreateDoctorUserScreen extends StatefulWidget {
   const CreateDoctorUserScreen({super.key});
 
   @override
-  _CreateDoctorUserScreenState createState() => _CreateDoctorUserScreenState();
+  CreateDoctorUserScreenState createState() => CreateDoctorUserScreenState();
 }
 
-class _CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
+class CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -83,29 +83,26 @@ class _CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
     });
 
     try {
-      // Doktor kullanıcısı oluştur
-      final result = await _apiService.register(
-        fullName: _nameController.text,
-        email: _emailController.text,
-        password: _passwordController.text,
-        birthDate: _selectedBirthDate,
-        role: 'doctor', // Doktor rolü - backend'de Role alanına kaydedilecek
+      // Doktor bilgilerini oluştur
+      final doctor = Doctor(
+        id: 0, // API tarafından atanacak
+        name: _nameController.text,
         specialization: _specializationController.text,
-        doctorId:
-            0, // API tarafından atanacak, ama doktor olduğunu belirtmek için 0 gönderiyoruz
-        doctorName: _nameController.text, // Doktor adı
+        email: _emailController.text,
+        phoneNumber: _phoneController.text,
+        isAvailable: true,
       );
 
-      // Debug için sonucu yazdır
-      debugPrint('Doktor kullanıcısı oluşturma sonucu: $result');
+      // Doğrudan doktor oluştur - bu işlem hem Doctors tablosuna hem de AppUser tablosuna kayıt ekler
+      final doctorResult = await _apiService.addDoctor(doctor);
 
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
 
-        if (result['success']) {
-          // Başarılı mesajı göster (mounted kontrolü ile)
+        if (doctorResult['success']) {
+          // Başarılı mesajı göster
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Doktor kullanıcısı başarıyla oluşturuldu'),
@@ -113,90 +110,67 @@ class _CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
             ),
           );
 
-          // Doktor bilgilerini de kaydet
-          final doctor = Doctor(
-            id: 0, // API tarafından atanacak
-            name: _nameController.text,
-            specialization: _specializationController.text,
-            email: _emailController.text,
-            phoneNumber: _phoneController.text,
-            isAvailable: true,
-          );
+          // Eğer API'den doktor ID'si döndüyse, kullanıcının doctorId değerini güncelle
+          if (doctorResult['data'] != null &&
+              doctorResult['data'] is Map &&
+              doctorResult['data'].containsKey('id')) {
+            final int doctorId = doctorResult['data']['id'];
 
-          final doctorResult = await _apiService.addDoctor(doctor);
+            // Debug için yazdır
+            debugPrint('Doktor ID: $doctorId');
 
-          if (doctorResult['success']) {
-            // Başarılı mesajı göster (mounted kontrolü ile)
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Doktor bilgileri başarıyla kaydedildi'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
+            // Şimdi doktor kullanıcısı için şifre ayarla
+            final passwordResult = await _apiService.register(
+              fullName: _nameController.text,
+              email: _emailController.text,
+              password: _passwordController.text,
+              birthDate: _selectedBirthDate,
+              role: 'doctor',
+              specialization: _specializationController.text,
+              doctorId: doctorId,
+              doctorName: _nameController.text,
+            );
 
-            // Eğer API'den doktor ID'si döndüyse, kullanıcının doctorId değerini güncelle
-            if (doctorResult['data'] != null &&
-                doctorResult['data'] is Map &&
-                doctorResult['data'].containsKey('id')) {
-              final int doctorId = doctorResult['data']['id'];
-
-              // Kullanıcı bilgilerini al
-              final userResult = await _apiService.getCurrentUser();
-              if (userResult['success'] && userResult['data'] != null) {
-                final userData = userResult['data'];
-
-                // Kullanıcı bilgilerini güncelle
-                final updatedUser = {
-                  'id': userData['id'],
-                  'fullName': userData['fullName'],
-                  'email': userData['email'],
-                  'phoneNumber':
-                      userData['phoneNumber'] ?? userData['mobileNumber'] ?? '',
-                  'doctorId': doctorId,
-                  'doctorName': _nameController.text,
-                  'specialization': _specializationController.text,
-                  'role': 'doctor',
-                };
-
-                // Doktor kullanıcısı bilgilerini güncelle
-                await _apiService.updateDoctorUser(updatedUser);
-
-                // Debug için yazdır
-                debugPrint(
-                    'Doktor kullanıcısı güncellendi: doctorId=$doctorId');
+            if (passwordResult['success']) {
+              // Başarılı mesajı göster
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Doktor şifresi başarıyla ayarlandı'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } else {
+              // Şifre ayarlama hatası
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Doktor şifresi ayarlanamadı: ${passwordResult['message']}'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
               }
             }
+          }
 
-            // Formu temizle
-            _nameController.clear();
-            _emailController.clear();
-            _passwordController.clear();
-            _confirmPasswordController.clear();
-            _specializationController.clear();
-            _phoneController.clear();
+          // Formu temizle
+          _nameController.clear();
+          _emailController.clear();
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+          _specializationController.clear();
+          _phoneController.clear();
 
-            // Önceki sayfaya dön (mounted kontrolü ile)
-            if (mounted) {
-              Navigator.pop(context);
-            }
-          } else {
-            // Hata mesajı göster (mounted kontrolü ile)
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Doktor bilgileri kaydedilirken hata oluştu: ${doctorResult['message']}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
+          // Önceki sayfaya dön
+          if (mounted) {
+            Navigator.pop(context);
           }
         } else {
           // Hata mesajı göster
           setState(() {
-            _errorMessage = result['message'];
+            _errorMessage = doctorResult['message'];
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -243,7 +217,7 @@ class _CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
                   padding: const EdgeInsets.all(8),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withAlpha(30),
+                    color: Colors.red.withAlpha(25),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

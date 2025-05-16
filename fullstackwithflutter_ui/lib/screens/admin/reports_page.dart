@@ -7,10 +7,10 @@ class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
 
   @override
-  _ReportsPageState createState() => _ReportsPageState();
+  ReportsPageState createState() => ReportsPageState();
 }
 
-class _ReportsPageState extends State<ReportsPage>
+class ReportsPageState extends State<ReportsPage>
     with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
@@ -544,7 +544,7 @@ class _ReportsPageState extends State<ReportsPage>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withAlpha(25),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

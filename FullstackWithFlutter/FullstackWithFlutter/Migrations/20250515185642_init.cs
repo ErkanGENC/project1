@@ -44,6 +44,7 @@ namespace FullstackWithFlutter.Migrations
                     Password = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     MobileNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     BirthDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DoctorId = table.Column<int>(type: "int", nullable: true),
                     DoctorName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Specialization = table.Column<string>(type: "nvarchar(max)", nullable: true),

@@ -64,7 +64,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        shadowColor: primaryColor.withOpacity(0.2),
+        shadowColor: primaryColor.withAlpha(51),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -75,7 +75,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 2,
-          shadowColor: primaryColor.withOpacity(0.4),
+          shadowColor: primaryColor.withAlpha(102),
         ),
       ),
       textButtonTheme: TextButtonThemeData(

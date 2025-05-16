@@ -9,10 +9,10 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  LoginScreenState createState() => LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -63,79 +63,90 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         // Kullanıcı rolünü kontrol et
-        if (result['data'] != null && result['data']['user'] != null) {
-          final userData = result['data']['user'];
-          String role = 'user'; // Varsayılan rol
+        Map<String, dynamic> userData = {};
 
-          // Debug için kullanıcı bilgilerini yazdır
-          print('Login userData: $userData');
-          print('Login result data: ${result['data']}');
+        // Debug için tüm yanıtı yazdır
+        print('LOGIN - Tüm yanıt: $result');
 
-          // Rol belirleme öncelik sırası:
-          // 1. API'den gelen rol bilgisi (en yüksek öncelik)
-          // 2. Doktor ID'si veya doktor adı kontrolü
-          // 3. İsim içinde "doktor" kelimesi kontrolü
-
-          // 1. API'den gelen rol bilgisini kontrol et (en yüksek öncelik)
-          if (userData['role'] != null &&
-              userData['role'].toString().isNotEmpty) {
-            role = userData['role'].toString().toLowerCase();
-            print('API\'den gelen rol: $role');
+        // API yanıt formatını kontrol et - iç içe yapıları kontrol et
+        if (result['data'] != null) {
+          if (result['data'] is Map) {
+            // Yeni API formatı: data -> data -> user
+            if (result['data']['data'] != null &&
+                result['data']['data'] is Map) {
+              if (result['data']['data']['user'] != null &&
+                  result['data']['data']['user'] is Map) {
+                userData =
+                    Map<String, dynamic>.from(result['data']['data']['user']);
+                print('LOGIN - Kullanıcı verisi (data->data->user): $userData');
+              }
+            }
+            // Eski API formatı: data -> user
+            else if (result['data']['user'] != null &&
+                result['data']['user'] is Map) {
+              userData = Map<String, dynamic>.from(result['data']['user']);
+              print('LOGIN - Kullanıcı verisi (data->user): $userData');
+            }
+            // Düz data
+            else {
+              userData = Map<String, dynamic>.from(result['data']);
+              print('LOGIN - Kullanıcı verisi (data): $userData');
+            }
           }
-          // 2. Doktor ID'si veya doktor adı varsa doktor rolü
-          // doctorId 0 olsa bile doktor olarak kabul et
-          else if ((userData['doctorId'] != null) ||
-              (userData['doctorName'] != null &&
-                  userData['doctorName'].toString().isNotEmpty)) {
-            role = 'doctor';
-            print(
-                'Doktor bilgileri bulundu: doctorId=${userData['doctorId']}, doctorName=${userData['doctorName']}');
-          }
-          // 3. Kullanıcı adı "doktor" içeriyorsa doktor rolü ver (geçici çözüm)
-          else if (userData['fullName'] != null &&
-              userData['fullName']
-                  .toString()
-                  .toLowerCase()
-                  .contains('doktor')) {
-            role = 'doctor';
-            print('İsimden doktor rolü tespit edildi: ${userData['fullName']}');
-          }
+        }
 
-          // Rol bilgisini debug için yazdır
-          print('Login ekranında belirlenen rol: $role');
+        // Rol bilgisini direkt al
+        String role = 'user'; // Varsayılan rol
 
-          print('Belirlenen rol: $role');
+        // API'den dönen role doğrudan kontrol et
+        if (userData.containsKey('role') &&
+            userData['role'] != null &&
+            userData['role'].toString().isNotEmpty) {
+          role = userData['role'].toString().toLowerCase();
+          print('LOGIN - API\'den gelen rol: $role');
+        }
 
-          // Role göre yönlendirme yap
-          if (role == 'doctor') {
-            // Doktor paneline yönlendir
-            print(
-                'Doktor rolü tespit edildi, doktor paneline yönlendiriliyor...');
+        // Sadece API'den gelen role değerine göre işlem yap
+        // Kullanıcı verilerini güncelle
+        await _apiService.saveUserData(userData);
 
-            // Doktor dashboard'ına yönlendir
-            Navigator.pushReplacementNamed(context, AppRoutes.doctorDashboard);
+        // Debug için rol bilgisini yazdır
+        print('LOGIN - Kullanıcı rolü: $role');
 
-            // Yönlendirme başarısız olursa, hata mesajı göster
+        print('LOGIN - Son belirlenen rol: $role');
+
+        // Role göre yönlendirme yap
+        if (role == 'doctor') {
+          print(
+              'LOGIN - Doktor rolü tespit edildi, doctor_dashboard sayfasına yönlendiriliyor...');
+
+          // Doktor dashboard'a yönlendir
+          if (mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              AppRoutes.doctorDashboard,
+            );
+
+            // Yönlendirme mesajı göster
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Doktor paneline yönlendiriliyor...'),
                 backgroundColor: Colors.blue,
               ),
             );
-          } else if (role == 'admin') {
-            // Admin paneline yönlendir
-            print(
-                'Admin rolü tespit edildi, admin paneline yönlendiriliyor...');
+          }
+        } else if (role == 'admin') {
+          print(
+              'LOGIN - Admin rolü tespit edildi, admin_dashboard sayfasına yönlendiriliyor...');
+          if (mounted) {
             Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
-          } else {
-            // Normal kullanıcı - Hoş geldiniz ekranına yönlendir
-            print(
-                'Normal kullanıcı rolü tespit edildi, hoş geldiniz ekranına yönlendiriliyor...');
-            Navigator.pushReplacementNamed(context, AppRoutes.welcome);
           }
         } else {
-          // Kullanıcı bilgisi yoksa varsayılan olarak hoş geldiniz ekranına yönlendir
-          Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+          print(
+              'LOGIN - Normal kullanıcı rolü tespit edildi, welcome sayfasına yönlendiriliyor...');
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+          }
         }
       } else {
         // Hatalı giriş

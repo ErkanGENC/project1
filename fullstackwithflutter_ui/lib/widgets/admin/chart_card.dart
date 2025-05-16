@@ -42,9 +42,7 @@ class ChartCard extends StatelessWidget {
             const SizedBox(height: 16),
             SizedBox(
               height: 200,
-              child: isPieChart
-                  ? _buildPieChart()
-                  : _buildBarChart(),
+              child: isPieChart ? _buildPieChart() : _buildBarChart(),
             ),
           ],
         ),
@@ -55,10 +53,12 @@ class ChartCard extends StatelessWidget {
   Widget _buildBarChart() {
     // Gerçek uygulamada, burada fl_chart veya charts_flutter gibi bir kütüphane kullanabilirsiniz
     // Şimdilik basit bir görselleştirme yapıyoruz
-    
+
     // Y eksenindeki maksimum değeri bul
-    final double maxValue = data.map<double>((item) => (item[yKey] as num).toDouble()).reduce((a, b) => a > b ? a : b);
-    
+    final double maxValue = data
+        .map<double>((item) => (item[yKey] as num).toDouble())
+        .reduce((a, b) => a > b ? a : b);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -68,7 +68,7 @@ class ChartCard extends StatelessWidget {
             children: data.map((item) {
               final double value = (item[yKey] as num).toDouble();
               final double percentage = value / maxValue;
-              
+
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -76,7 +76,9 @@ class ChartCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
-                        isCurrency ? '${value.toInt()} ₺' : value.toInt().toString(),
+                        isCurrency
+                            ? '${value.toInt()} ₺'
+                            : value.toInt().toString(),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -123,20 +125,22 @@ class ChartCard extends StatelessWidget {
   Widget _buildPieChart() {
     // Gerçek uygulamada, burada fl_chart veya charts_flutter gibi bir kütüphane kullanabilirsiniz
     // Şimdilik basit bir görselleştirme yapıyoruz
-    
+
     // Toplam değeri hesapla
-    final double total = data.map<double>((item) => (item[yKey] as num).toDouble()).reduce((a, b) => a + b);
-    
+    final double total = data
+        .map<double>((item) => (item[yKey] as num).toDouble())
+        .reduce((a, b) => a + b);
+
     // Renk listesi
     final List<Color> colors = [
       color,
-      color.withOpacity(0.8),
-      color.withOpacity(0.6),
-      color.withOpacity(0.4),
-      color.withOpacity(0.2),
+      color.withAlpha(204), // ~0.8
+      color.withAlpha(153), // ~0.6
+      color.withAlpha(102), // ~0.4
+      color.withAlpha(51), // ~0.2
       Colors.grey,
     ];
-    
+
     return Row(
       children: [
         // Pasta grafiği (basit bir temsil)
@@ -156,7 +160,7 @@ class ChartCard extends StatelessWidget {
             ),
           ),
         ),
-        
+
         // Açıklama
         Expanded(
           flex: 3,
@@ -167,7 +171,7 @@ class ChartCard extends StatelessWidget {
               final item = data[index];
               final double value = (item[yKey] as num).toDouble();
               final double percentage = (value / total) * 100;
-              
+
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
@@ -176,7 +180,8 @@ class ChartCard extends StatelessWidget {
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: index < colors.length ? colors[index] : Colors.grey,
+                        color:
+                            index < colors.length ? colors[index] : Colors.grey,
                         shape: BoxShape.circle,
                       ),
                     ),

@@ -7,10 +7,10 @@ class PatientsManagement extends StatefulWidget {
   const PatientsManagement({super.key});
 
   @override
-  _PatientsManagementState createState() => _PatientsManagementState();
+  PatientsManagementState createState() => PatientsManagementState();
 }
 
-class _PatientsManagementState extends State<PatientsManagement> {
+class PatientsManagementState extends State<PatientsManagement> {
   final ApiService _apiService = ApiService();
   List<User> _patients = [];
   List<User> _filteredPatients = [];

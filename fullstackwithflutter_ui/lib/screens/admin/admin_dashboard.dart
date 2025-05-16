@@ -13,10 +13,10 @@ class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
   @override
-  _AdminDashboardState createState() => _AdminDashboardState();
+  AdminDashboardState createState() => AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> {
+class AdminDashboardState extends State<AdminDashboard> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   String _errorMessage = '';
@@ -220,7 +220,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               // Ayarlar sayfasına git
             },
           ),
-          const Spacer(),
+          const SizedBox(height: 100), // Spacer yerine SizedBox kullanıldı
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),

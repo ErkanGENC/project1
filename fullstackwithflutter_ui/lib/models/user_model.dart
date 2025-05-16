@@ -62,8 +62,14 @@ class User {
     // Rol bilgisini kontrol et
     String role = 'user'; // Varsayılan rol
 
-    // Eğer doctorId varsa ve null değilse, bu kullanıcı bir doktor
-    if (doctorId != null) {
+    // Eğer doctorId varsa ve null değilse ve 0'dan büyükse, bu kullanıcı bir doktor
+    if (doctorId != null && doctorId > 0) {
+      role = 'doctor';
+    }
+
+    // Eğer doctorName veya specialization varsa, bu kullanıcı bir doktor olabilir
+    if ((doctorName != null && doctorName.isNotEmpty) ||
+        (specialization != null && specialization.isNotEmpty)) {
       role = 'doctor';
     }
 
