@@ -61,13 +61,6 @@ class DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
 
         // Doktorun randevularını filtrele
         _appointments = allAppointments.where((appointment) {
-          // Doktor ID'si ile eşleşen randevuları bul
-          if (_currentDoctor?.doctorId != null &&
-              appointment.doctorId != null &&
-              appointment.doctorId == _currentDoctor?.doctorId) {
-            return true;
-          }
-
           // Doktor adı ile eşleşen randevuları bul
           if (_currentDoctor?.fullName != null &&
               appointment.doctorName.toLowerCase() ==
@@ -75,10 +68,10 @@ class DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             return true;
           }
 
-          // Doktor adı doctorName ile eşleşen randevuları bul
-          if (_currentDoctor?.doctorName != null &&
-              appointment.doctorName.toLowerCase() ==
-                  _currentDoctor!.doctorName!.toLowerCase()) {
+          // Doktor ID'si ile eşleşen randevuları bul
+          if (_currentDoctor?.id != null &&
+              appointment.doctorId != null &&
+              appointment.doctorId == _currentDoctor!.id) {
             return true;
           }
 
@@ -120,7 +113,8 @@ class DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Randevularım'),
+        title:
+            Text('Dr. ${_currentDoctor?.fullName ?? 'Doktor'} - Randevularım'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -224,7 +218,7 @@ class DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _currentDoctor?.fullName ?? 'Doktor',
+                  'Dr. ${_currentDoctor?.fullName ?? 'Doktor'}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,

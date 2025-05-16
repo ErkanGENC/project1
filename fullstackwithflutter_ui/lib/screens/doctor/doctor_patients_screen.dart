@@ -18,6 +18,7 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   List<User> _allPatients = [];
   List<User> _filteredPatients = [];
   List<Appointment> _appointments = [];
+  User? _currentDoctor;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -43,15 +44,13 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
       // Mevcut kullanıcı bilgilerini al
       final userResult = await _apiService.getCurrentUser();
       if (userResult['success'] && userResult['data'] != null) {
-        // Doktor ID'sini al
-        final doctorId = userResult['data']['doctorId'];
-        final doctorName =
-            userResult['data']['fullName'] ?? userResult['data']['doctorName'];
+        // Doktor bilgilerini al
+        _currentDoctor = User.fromJson(userResult['data']);
 
-        if (doctorId == null || doctorId == 0) {
+        // Doktor bilgilerini kontrol et
+        if (_currentDoctor == null) {
           setState(() {
-            _errorMessage =
-                'Doktor bilgileriniz eksik. Lütfen yönetici ile iletişime geçin.';
+            _errorMessage = 'Doktor bilgileri alınamadı.';
             _isLoading = false;
           });
           return;
@@ -61,11 +60,21 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
         final allAppointments = await _apiService.getAllAppointments();
 
         // Doktorun randevularını filtrele
-        _appointments = allAppointments
-            .where((appointment) =>
-                appointment.doctorId == doctorId ||
-                appointment.doctorName == doctorName)
-            .toList();
+        _appointments = allAppointments.where((appointment) {
+          // Doktor adı ile eşleşen randevuları bul
+          if (appointment.doctorName.toLowerCase() ==
+              _currentDoctor!.fullName.toLowerCase()) {
+            return true;
+          }
+
+          // Doktor ID'si ile eşleşen randevuları bul
+          if (appointment.doctorId != null &&
+              appointment.doctorId == _currentDoctor!.id) {
+            return true;
+          }
+
+          return false;
+        }).toList();
 
         // Tüm hastaları al
         final allUsers = await _apiService.getAllUsers();
@@ -125,7 +134,7 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hastalarım'),
+        title: Text('Dr. ${_currentDoctor?.fullName ?? 'Doktor'} - Hastalarım'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

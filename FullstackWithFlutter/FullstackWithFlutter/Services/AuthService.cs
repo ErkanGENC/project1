@@ -30,47 +30,101 @@ namespace FullstackWithFlutter.Services
         {
             try
             {
-                // Kullanıcıyı email'e göre bul
+                // Önce AppUsers tablosunda kullanıcıyı ara
                 var users = await _unitofWork.AppUsers.Find(u => u.Email == loginViewModel.Email);
                 var user = users.FirstOrDefault();
 
-                if (user == null)
+                if (user != null)
                 {
-                    return new ApiResponse
+                    // Şifreyi doğrula
+                    if (!VerifyPassword(loginViewModel.Password, user.Password))
                     {
-                        Status = false,
-                        Message = "Kullanıcı bulunamadı!",
-                        Data = null
-                    };
-                }
-
-                // Şifreyi doğrula
-                if (!VerifyPassword(loginViewModel.Password, user.Password))
-                {
-                    return new ApiResponse
-                    {
-                        Status = false,
-                        Message = "Hatalı şifre!",
-                        Data = null
-                    };
-                }
-
-                // Kullanıcı bilgilerini döndür
-                var userViewModel = _mapper.Map<AppUserViewModel>(user);
-
-                // JWT token oluştur
-                var token = GenerateJwtToken(user);
-
-                return new ApiResponse
-                {
-                    Status = true,
-                    Message = "Giriş başarılı!",
-                    Data = new
-                    {
-                        user = userViewModel,
-                        token = token
+                        return new ApiResponse
+                        {
+                            Status = false,
+                            Message = "Hatalı şifre!",
+                            Data = null
+                        };
                     }
-                };
+
+                    // Kullanıcı bilgilerini döndür
+                    var userViewModel = _mapper.Map<AppUserViewModel>(user);
+
+                    // JWT token oluştur
+                    var token = GenerateJwtToken(user);
+
+                    return new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Giriş başarılı!",
+                        Data = new
+                        {
+                            user = userViewModel,
+                            token = token
+                        }
+                    };
+                }
+                else
+                {
+                    // AppUsers tablosunda bulunamadıysa, Doctors tablosunda ara
+                    var doctors = await _unitofWork.Doctors.Find(d => d.Email == loginViewModel.Email);
+                    var doctor = doctors.FirstOrDefault();
+
+                    if (doctor == null)
+                    {
+                        return new ApiResponse
+                        {
+                            Status = false,
+                            Message = "Kullanıcı bulunamadı!",
+                            Data = null
+                        };
+                    }
+
+                    // Doktor için geçici bir AppUser nesnesi oluştur
+                    var doctorUser = new AppUser
+                    {
+                        Id = doctor.Id,
+                        FullName = doctor.Name,
+                        Email = doctor.Email,
+                        MobileNumber = doctor.PhoneNumber,
+                        Role = "doctor",
+                        DoctorId = doctor.Id,
+                        DoctorName = doctor.Name,
+                        Specialization = doctor.Specialization,
+                        CreatedDate = doctor.CreatedDate,
+                        CreatedBy = doctor.CreatedBy,
+                        UpdatedDate = doctor.UpdatedDate,
+                        UpdatedBy = doctor.UpdatedBy
+                    };
+
+                    // Doktor için şifre kontrolü
+                    if (!string.IsNullOrEmpty(doctor.Password) && !VerifyPassword(loginViewModel.Password, doctor.Password))
+                    {
+                        return new ApiResponse
+                        {
+                            Status = false,
+                            Message = "Hatalı şifre!",
+                            Data = null
+                        };
+                    }
+
+                    // Kullanıcı bilgilerini döndür
+                    var doctorViewModel = _mapper.Map<AppUserViewModel>(doctorUser);
+
+                    // JWT token oluştur
+                    var token = GenerateJwtToken(doctorUser);
+
+                    return new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Doktor girişi başarılı!",
+                        Data = new
+                        {
+                            user = doctorViewModel,
+                            token = token
+                        }
+                    };
+                }
             }
             catch (Exception ex)
             {
@@ -185,13 +239,40 @@ namespace FullstackWithFlutter.Services
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             // Token içeriğindeki bilgiler (claims)
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim("userId", user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim("email", user.Email ?? ""),
                 new Claim(ClaimTypes.Name, user.FullName ?? ""),
+                new Claim("name", user.FullName ?? ""),
+                new Claim("fullName", user.FullName ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+
+            // Rol bilgisini ekle
+            if (!string.IsNullOrEmpty(user.Role))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, user.Role));
+                claims.Add(new Claim("role", user.Role));
+            }
+
+            // Doktor ID'si varsa ekle
+            if (user.DoctorId.HasValue)
+            {
+                claims.Add(new Claim("doctorId", user.DoctorId.Value.ToString()));
+            }
+
+            // Doktor adı ve uzmanlık alanı varsa ekle
+            if (!string.IsNullOrEmpty(user.DoctorName))
+            {
+                claims.Add(new Claim("doctorName", user.DoctorName));
+            }
+
+            if (!string.IsNullOrEmpty(user.Specialization))
+            {
+                claims.Add(new Claim("specialization", user.Specialization));
+            }
 
             // Token oluştur
             var token = new JwtSecurityToken(

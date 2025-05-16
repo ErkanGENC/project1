@@ -5,6 +5,7 @@ class Doctor {
   final String email;
   final String phoneNumber;
   final bool isAvailable;
+  final String? password; // Şifre alanı eklendi
   final DateTime? createdDate;
   final DateTime? updatedDate;
 
@@ -15,6 +16,7 @@ class Doctor {
     required this.email,
     required this.phoneNumber,
     this.isAvailable = true,
+    this.password, // Şifre parametresi eklendi
     this.createdDate,
     this.updatedDate,
   });
@@ -53,6 +55,7 @@ class Doctor {
           json['mobileNumber'] ??
           'Telefon numarası yok',
       isAvailable: json['isAvailable'] ?? json['is_available'] ?? true,
+      password: json['password'], // Şifre alanı eklendi
       createdDate: createdDate,
       updatedDate: updatedDate,
     );
@@ -66,6 +69,7 @@ class Doctor {
       'email': email,
       'phoneNumber': phoneNumber,
       'isAvailable': isAvailable,
+      if (password != null) 'password': password, // Şifre alanı eklendi
       if (createdDate != null) 'createdDate': createdDate!.toIso8601String(),
       if (updatedDate != null) 'updatedDate': updatedDate!.toIso8601String(),
     };

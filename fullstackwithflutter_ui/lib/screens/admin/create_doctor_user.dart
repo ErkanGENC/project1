@@ -91,6 +91,7 @@ class CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
         email: _emailController.text,
         phoneNumber: _phoneController.text,
         isAvailable: true,
+        password: _passwordController.text, // Şifre alanı eklendi
       );
 
       // Doğrudan doktor oluştur - bu işlem hem Doctors tablosuna hem de AppUser tablosuna kayıt ekler
@@ -110,7 +111,7 @@ class CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
             ),
           );
 
-          // Eğer API'den doktor ID'si döndüyse, kullanıcının doctorId değerini güncelle
+          // Eğer API'den doktor ID'si döndüyse, debug için yazdır
           if (doctorResult['data'] != null &&
               doctorResult['data'] is Map &&
               doctorResult['data'].containsKey('id')) {
@@ -118,41 +119,6 @@ class CreateDoctorUserScreenState extends State<CreateDoctorUserScreen> {
 
             // Debug için yazdır
             debugPrint('Doktor ID: $doctorId');
-
-            // Şimdi doktor kullanıcısı için şifre ayarla
-            final passwordResult = await _apiService.register(
-              fullName: _nameController.text,
-              email: _emailController.text,
-              password: _passwordController.text,
-              birthDate: _selectedBirthDate,
-              role: 'doctor',
-              specialization: _specializationController.text,
-              doctorId: doctorId,
-              doctorName: _nameController.text,
-            );
-
-            if (passwordResult['success']) {
-              // Başarılı mesajı göster
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Doktor şifresi başarıyla ayarlandı'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            } else {
-              // Şifre ayarlama hatası
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                        'Doktor şifresi ayarlanamadı: ${passwordResult['message']}'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
-            }
           }
 
           // Formu temizle

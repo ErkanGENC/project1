@@ -760,6 +760,7 @@ class ApiService {
         };
       }
 
+      // Önce normal kullanıcı olarak deneyelim
       final response = await http.get(
         Uri.parse('$baseUrl/Users/GetCurrentUser'),
         headers: {
@@ -786,15 +787,7 @@ class ApiService {
 
             // Doktor bilgilerini kontrol et
             if (userData.containsKey('role') && userData['role'] == 'doctor') {
-              // DoctorId kontrolü
-              if (userData.containsKey('doctorId') &&
-                  userData['doctorId'] != null) {
-                // DoctorId 0 ise ve doktor rolü varsa, bu bir hata durumu olabilir
-                if (userData['doctorId'] is int && userData['doctorId'] == 0) {
-                  print(
-                      'UYARI: Doktor rolüne sahip kullanıcının DoctorId değeri 0!');
-                }
-              }
+              // Doktor kullanıcısı tespit edildi: ${userData['email']}
             }
           }
 
@@ -808,8 +801,7 @@ class ApiService {
           // Kullanıcı ID'sini ekleyelim
           if (responseData is Map && !responseData.containsKey('id')) {
             // Token'dan kullanıcı ID'sini çıkarmaya çalış
-            final token = await getToken();
-            if (token != null) {
+            {
               try {
                 // JWT token'ı decode et (basit bir yöntem)
                 final parts = token.split('.');
@@ -825,6 +817,11 @@ class ApiService {
                     responseData['id'] =
                         int.parse(payloadMap['userId'].toString());
                   }
+
+                  // role claim'ini kontrol et
+                  if (payloadMap.containsKey('role')) {
+                    responseData['role'] = payloadMap['role'];
+                  }
                 }
               } catch (e) {
                 // Token decode edilemezse bir şey yapma
@@ -839,6 +836,83 @@ class ApiService {
           };
         }
       } else {
+        // Kullanıcı bulunamadıysa, doktor olarak deneyelim
+        try {
+          final doctorResponse = await http.get(
+            Uri.parse('$baseUrl/Doctors/GetCurrentDoctor'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          );
+
+          if (doctorResponse.statusCode == 200) {
+            final dynamic doctorData =
+                jsonDecode(utf8.decode(doctorResponse.bodyBytes));
+
+            // Doktor verilerini düzenle
+            if (doctorData is Map) {
+              // Rol bilgisini ekle
+              doctorData['role'] = 'doctor';
+
+              // ID kontrolü
+              if (!doctorData.containsKey('id') &&
+                  doctorData.containsKey('doctorId')) {
+                doctorData['id'] = doctorData['doctorId'];
+              }
+
+              return {
+                'success': true,
+                'message': 'Doktor bilgileri alındı',
+                'data': doctorData,
+              };
+            }
+          }
+        } catch (e) {
+          // Doktor bilgileri alınırken hata: $e
+        }
+
+        // JWT token'dan bilgileri çıkarmaya çalış
+        try {
+          {
+            final parts = token.split('.');
+            if (parts.length == 3) {
+              final payload = parts[1];
+              final normalized = base64Url.normalize(payload);
+              final decoded = utf8.decode(base64Url.decode(normalized));
+              final payloadMap = jsonDecode(decoded) as Map<String, dynamic>;
+
+              // Temel kullanıcı bilgilerini oluştur
+              final userData = <String, dynamic>{
+                'id': payloadMap.containsKey('userId')
+                    ? int.parse(payloadMap['userId'].toString())
+                    : 0,
+                'email':
+                    payloadMap.containsKey('email') ? payloadMap['email'] : '',
+                'fullName': payloadMap.containsKey('fullName')
+                    ? payloadMap['fullName']
+                    : payloadMap.containsKey('name')
+                        ? payloadMap['name']
+                        : '',
+                'role': payloadMap.containsKey('role')
+                    ? payloadMap['role']
+                    : 'doctor',
+                'specialization': payloadMap.containsKey('specialization')
+                    ? payloadMap['specialization']
+                    : '',
+              };
+
+              return {
+                'success': true,
+                'message': 'Token bilgileri alındı',
+                'data': userData,
+              };
+            }
+          }
+        } catch (e) {
+          // Token çözümlenirken hata: $e
+        }
+
         return {
           'success': false,
           'message': 'Kullanıcı bilgileri alınamadı: ${response.statusCode}',
@@ -847,6 +921,7 @@ class ApiService {
       }
     } catch (e) {
       // Hata durumunu loglama
+      // getCurrentUser hata: $e
       return {
         'success': false,
         'message': 'API bağlantı hatası: $e',

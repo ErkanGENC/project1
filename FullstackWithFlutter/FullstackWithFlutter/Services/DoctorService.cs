@@ -23,56 +23,39 @@ namespace FullstackWithFlutter.Services
             {
                 // Yeni doktor oluştur
                 var newDoctor = _mapper.Map<Doctor>(doctorViewModel);
+
+                // Şifre varsa hashle
+                if (!string.IsNullOrEmpty(doctorViewModel.Password))
+                {
+                    newDoctor.Password = HashPassword(doctorViewModel.Password);
+                }
+                else
+                {
+                    // Varsayılan şifre (gerçek uygulamada rastgele şifre oluşturulup e-posta ile gönderilmelidir)
+                    newDoctor.Password = HashPassword("Doctor123");
+                }
+
                 newDoctor.CreatedDate = DateTime.Now;
                 newDoctor.CreatedBy = "API";
                 await _unitOfWork.Doctors.Add(newDoctor);
                 var result = _unitOfWork.Complete();
 
+                // Doktor başarıyla oluşturuldu
                 if (result > 0)
                 {
-                    // Doktor başarıyla oluşturuldu, şimdi AppUser tablosunda da bir kayıt oluşturalım
-                    // veya mevcut kaydı güncelleyelim
-
-                    // Önce e-posta adresine göre kullanıcıyı kontrol et
+                    // Eğer AppUsers tablosunda aynı e-posta adresine sahip bir kullanıcı varsa,
+                    // bu kullanıcıyı AppUsers tablosundan silelim
                     var existingUsers = await _unitOfWork.AppUsers.Find(u => u.Email == doctorViewModel.Email);
                     var existingUser = existingUsers.FirstOrDefault();
 
                     if (existingUser != null)
                     {
-                        // Kullanıcı zaten var, doktor bilgilerini güncelle
-                        existingUser.Role = "doctor";
-                        existingUser.DoctorId = newDoctor.Id; // Yeni oluşturulan doktorun ID'si
-                        existingUser.DoctorName = newDoctor.Name;
-                        existingUser.Specialization = newDoctor.Specialization;
-                        existingUser.UpdatedDate = DateTime.Now;
-                        existingUser.UpdatedBy = "API";
-
-                        _unitOfWork.AppUsers.Update(existingUser);
-                    }
-                    else
-                    {
-                        // Kullanıcı yok, yeni bir kullanıcı oluştur
-                        var newUser = new Core.Models.AppUser
-                        {
-                            FullName = newDoctor.Name,
-                            Email = newDoctor.Email,
-                            MobileNumber = newDoctor.PhoneNumber,
-                            Role = "doctor",
-                            DoctorId = newDoctor.Id,
-                            DoctorName = newDoctor.Name,
-                            Specialization = newDoctor.Specialization,
-                            CreatedDate = DateTime.Now,
-                            CreatedBy = "API",
-                            // Varsayılan şifre (gerçek uygulamada rastgele şifre oluşturulup e-posta ile gönderilmelidir)
-                            Password = HashPassword("Doctor123")
-                        };
-
-                        await _unitOfWork.AppUsers.Add(newUser);
+                        // Kullanıcıyı AppUsers tablosundan sil
+                        _unitOfWork.AppUsers.Delete(existingUser);
+                        _unitOfWork.Complete();
                     }
 
-                    // Değişiklikleri kaydet
-                    var userResult = _unitOfWork.Complete();
-                    return userResult > 0;
+                    return true;
                 }
 
                 return result > 0;
@@ -101,20 +84,17 @@ namespace FullstackWithFlutter.Services
                 if (doctor != null)
                 {
                     // Önce AppUser tablosundaki ilişkili kaydı bul
-                    var existingUsers = await _unitOfWork.AppUsers.Find(u => u.DoctorId == doctorId);
-                    var existingUser = existingUsers.FirstOrDefault();
+                    var existingUsers = await _unitOfWork.AppUsers.Find(u => u.DoctorId == doctorId || u.Email == doctor.Email);
 
-                    if (existingUser != null)
+                    // Tüm ilişkili kullanıcıları sil
+                    foreach (var existingUser in existingUsers)
                     {
-                        // Kullanıcıyı silmek yerine, doktor bilgilerini temizle ve rolü "user" olarak güncelle
-                        existingUser.Role = "user";
-                        existingUser.DoctorId = null;
-                        existingUser.DoctorName = null;
-                        existingUser.Specialization = null;
-                        existingUser.UpdatedDate = DateTime.Now;
-                        existingUser.UpdatedBy = "API";
+                        _unitOfWork.AppUsers.Delete(existingUser);
+                    }
 
-                        _unitOfWork.AppUsers.Update(existingUser);
+                    if (existingUsers.Any())
+                    {
+                        _unitOfWork.Complete();
                     }
 
                     // Doktoru sil
@@ -160,6 +140,21 @@ namespace FullstackWithFlutter.Services
             return null;
         }
 
+        public async Task<DoctorViewModel> GetDoctorByEmail(string email)
+        {
+            if (!string.IsNullOrEmpty(email))
+            {
+                var doctors = await _unitOfWork.Doctors.Find(d => d.Email == email);
+                var doctor = doctors.FirstOrDefault();
+                if (doctor != null)
+                {
+                    var doctorResp = _mapper.Map<DoctorViewModel>(doctor);
+                    return doctorResp;
+                }
+            }
+            return null;
+        }
+
         public async Task<bool> UpdateDoctor(int doctorId, SaveDoctorViewModel doctorViewModel)
         {
             if (doctorId > 0)
@@ -180,70 +175,22 @@ namespace FullstackWithFlutter.Services
 
                     if (result > 0)
                     {
-                        // Doktor başarıyla güncellendi, şimdi AppUser tablosundaki kaydı da güncelleyelim
+                        // Doktor başarıyla güncellendi
+                        // Eğer AppUsers tablosunda bu doktora ait bir kullanıcı varsa, silelim
+                        var existingUsers = await _unitOfWork.AppUsers.Find(u => u.Email == doctor.Email || u.DoctorId == doctorId);
 
-                        // DoctorId'ye göre kullanıcıyı bul
-                        var existingUsers = await _unitOfWork.AppUsers.Find(u => u.DoctorId == doctorId);
-                        var existingUser = existingUsers.FirstOrDefault();
-
-                        if (existingUser != null)
+                        foreach (var existingUser in existingUsers)
                         {
-                            // Kullanıcı bulundu, bilgilerini güncelle
-                            existingUser.FullName = doctor.Name;
-                            existingUser.Email = doctor.Email;
-                            existingUser.MobileNumber = doctor.PhoneNumber;
-                            existingUser.DoctorName = doctor.Name;
-                            existingUser.Specialization = doctor.Specialization;
-                            existingUser.UpdatedDate = DateTime.Now;
-                            existingUser.UpdatedBy = "API";
-
-                            _unitOfWork.AppUsers.Update(existingUser);
-                            var userResult = _unitOfWork.Complete();
-                            return userResult > 0;
+                            // Kullanıcıyı AppUsers tablosundan sil
+                            _unitOfWork.AppUsers.Delete(existingUser);
                         }
-                        else
+
+                        if (existingUsers.Any())
                         {
-                            // Kullanıcı bulunamadı, e-posta adresine göre ara
-                            var usersByEmail = await _unitOfWork.AppUsers.Find(u => u.Email == doctor.Email);
-                            var userByEmail = usersByEmail.FirstOrDefault();
-
-                            if (userByEmail != null)
-                            {
-                                // E-posta adresine göre kullanıcı bulundu, doktor bilgilerini güncelle
-                                userByEmail.Role = "doctor";
-                                userByEmail.DoctorId = doctorId;
-                                userByEmail.DoctorName = doctor.Name;
-                                userByEmail.Specialization = doctor.Specialization;
-                                userByEmail.UpdatedDate = DateTime.Now;
-                                userByEmail.UpdatedBy = "API";
-
-                                _unitOfWork.AppUsers.Update(userByEmail);
-                                var userResult = _unitOfWork.Complete();
-                                return userResult > 0;
-                            }
-                            else
-                            {
-                                // Kullanıcı yok, yeni bir kullanıcı oluştur
-                                var newUser = new Core.Models.AppUser
-                                {
-                                    FullName = doctor.Name,
-                                    Email = doctor.Email,
-                                    MobileNumber = doctor.PhoneNumber,
-                                    Role = "doctor",
-                                    DoctorId = doctorId,
-                                    DoctorName = doctor.Name,
-                                    Specialization = doctor.Specialization,
-                                    CreatedDate = DateTime.Now,
-                                    CreatedBy = "API",
-                                    // Varsayılan şifre
-                                    Password = HashPassword("Doctor123")
-                                };
-
-                                await _unitOfWork.AppUsers.Add(newUser);
-                                var userResult = _unitOfWork.Complete();
-                                return userResult > 0;
-                            }
+                            _unitOfWork.Complete();
                         }
+
+                        return true;
                     }
 
                     return result > 0;

@@ -216,5 +216,76 @@ namespace FullstackWithFlutter.Controllers
                 return BadRequest(resp);
             }
         }
+
+        [HttpGet("GetCurrentDoctor")]
+        public async Task<IActionResult> GetCurrentDoctor()
+        {
+            try
+            {
+                // Kullanıcı kimliğini al
+                var userId = User.FindFirst("userId")?.Value;
+                var email = User.FindFirst("email")?.Value;
+                var fullName = User.FindFirst("fullName")?.Value;
+                var role = User.FindFirst("role")?.Value;
+
+                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email))
+                {
+                    var resp = new ApiResponse
+                    {
+                        Status = false,
+                        Message = "User information not found in token",
+                        Data = null,
+                    };
+                    return BadRequest(resp);
+                }
+
+                // Doktor bilgilerini al
+                var doctor = await _doctorService.GetDoctorByEmail(email);
+                if (doctor != null)
+                {
+                    // Doktor rolünü ekle
+                    doctor.Role = "doctor";
+
+                    var resp = new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Current doctor fetched successfully",
+                        Data = doctor,
+                    };
+                    return Ok(resp);
+                }
+                else
+                {
+                    // Doktor bulunamadıysa, token'dan gelen bilgilerle yeni bir doktor nesnesi oluştur
+                    var doctorFromToken = new DoctorViewModel
+                    {
+                        Id = int.Parse(userId),
+                        Email = email,
+                        Name = fullName,
+                        Role = role ?? "doctor",
+                        Specialization = User.FindFirst("specialization")?.Value ?? "Uzman Doktor"
+                    };
+
+                    var resp = new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Doctor information created from token",
+                        Data = doctorFromToken,
+                    };
+                    return Ok(resp);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching current doctor");
+                var resp = new ApiResponse
+                {
+                    Status = false,
+                    Message = "Error fetching current doctor: " + ex.Message,
+                    Data = null,
+                };
+                return BadRequest(resp);
+            }
+        }
     }
 }

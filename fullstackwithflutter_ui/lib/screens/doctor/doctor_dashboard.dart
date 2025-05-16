@@ -49,29 +49,32 @@ class DoctorDashboardState extends State<DoctorDashboard> {
           return;
         }
 
-        // DoctorId kontrolü
-        if (currentUser.doctorId == null || currentUser.doctorId == 0) {
-          setState(() {
-            _errorMessage =
-                'Doktor bilgileriniz eksik. Lütfen yönetici ile iletişime geçin.';
-            _isLoading = false;
-          });
-          return;
-        }
-
         _currentDoctor = currentUser;
 
         // Tüm randevuları al
         final appointments = await _apiService.getAllAppointments();
 
         // Doktorun randevularını filtrele
-        _doctorAppointments = appointments
-            .where((appointment) =>
-                appointment.doctorName == _currentDoctor!.fullName ||
-                (appointment.doctorName.isNotEmpty &&
-                    _currentDoctor!.doctorName != null &&
-                    appointment.doctorName == _currentDoctor!.doctorName))
-            .toList();
+        _doctorAppointments = appointments.where((appointment) {
+          // Doktor adı ile eşleşen randevuları bul
+          if (appointment.doctorName.toLowerCase() ==
+              _currentDoctor!.fullName.toLowerCase()) {
+            return true;
+          }
+
+          // Doktor ID'si ile eşleşen randevuları bul
+          if (appointment.doctorId != null &&
+              appointment.doctorId == _currentDoctor!.id) {
+            return true;
+          }
+
+          return false;
+        }).toList();
+
+        // Debug bilgileri
+        // Doktor: ${_currentDoctor!.fullName}, ID: ${_currentDoctor!.id}
+        // Toplam randevu sayısı: ${appointments.length}
+        // Doktora ait randevu sayısı: ${_doctorAppointments.length}
 
         // Dashboard verilerini hazırla
         final todayAppointments = _getTodayAppointments(_doctorAppointments);
@@ -126,7 +129,7 @@ class DoctorDashboardState extends State<DoctorDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Doktor Paneli'),
+        title: Text('Dr. ${_currentDoctor?.fullName ?? 'Doktor'} Paneli'),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
@@ -178,7 +181,7 @@ class DoctorDashboardState extends State<DoctorDashboard> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _currentDoctor?.fullName ?? 'Doktor',
+                  'Dr. ${_currentDoctor?.fullName ?? 'Doktor'}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -252,7 +255,7 @@ class DoctorDashboardState extends State<DoctorDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Hoş Geldiniz, ${_currentDoctor?.fullName ?? 'Doktor'}',
+            'Hoş Geldiniz, Dr. ${_currentDoctor?.fullName ?? 'Doktor'}',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textColor,
