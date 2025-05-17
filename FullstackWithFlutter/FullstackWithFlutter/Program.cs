@@ -61,6 +61,8 @@ public class Program
         builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IActivityService, ActivityService>();
+        builder.Services.AddScoped<IDentalTrackingService, DentalTrackingService>();
+        builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
         builder.Services.AddEndpointsApiExplorer();
 
         // Add logging
@@ -92,6 +94,7 @@ public class Program
             try
             {
                 var dbInit = services.GetRequiredService<IDatabaseInitializer>();
+                await dbInit.InitializeDatabase();
                 await dbInit.SeedSampData();
             }
             catch (Exception ex)

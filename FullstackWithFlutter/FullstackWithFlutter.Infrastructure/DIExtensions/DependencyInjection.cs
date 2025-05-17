@@ -16,6 +16,8 @@ namespace FullstackWithFlutter.Infrastructure.DIExtensions
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();
             services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
             services.AddScoped<IActivityRepository, ActivityRepository>();
+            services.AddScoped<IDentalTrackingRepository, DentalTrackingRepository>();
+            services.AddScoped<IUserSettingsRepository, UserSettingsRepository>();
             services.AddScoped<IUnitofWork, UnitofWork>();
             services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 

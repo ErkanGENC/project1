@@ -87,10 +87,24 @@ class DentalTrackingService {
   // Kullanıcının tüm kayıtlarını getir
   Future<List<DentalTrackingModel>> getAllRecords(int userId) async {
     try {
-      // Debug için kullanıcı ID'sini yazdır
       print('Getting all records for user ID: $userId');
 
-      // Önce yerel depolamadan verileri al
+      // Önce API'den verileri almayı dene
+      try {
+        final records = await _apiService.getUserDentalRecords(userId);
+        if (records.isNotEmpty) {
+          print(
+              'Found ${records.length} records from API for user ID: $userId');
+          return records
+              .map((json) => DentalTrackingModel.fromJson(json))
+              .toList();
+        }
+      } catch (apiError) {
+        print(
+            'Error getting records from API: $apiError, falling back to local storage');
+      }
+
+      // API'den veri alınamazsa yerel depolamadan verileri al
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_storageKey);
 
@@ -126,14 +140,33 @@ class DentalTrackingService {
   // Yeni kayıt ekle veya mevcut kaydı güncelle
   Future<bool> saveRecord(DentalTrackingModel record) async {
     try {
-      // Debug için kaydedilecek kaydı yazdır
-      print('Saving record: userId=${record.userId}, date=${record.date}, '
-          'morningBrushing=${record.morningBrushing}, '
-          'eveningBrushing=${record.eveningBrushing}, '
-          'usedFloss=${record.usedFloss}, '
-          'usedMouthwash=${record.usedMouthwash}');
+      print('Saving record: userId=${record.userId}, date=${record.date}');
 
-      // Tüm kayıtları getir
+      // Önce API'ye kaydetmeyi dene
+      try {
+        // API'ye gönderilecek veriyi hazırla
+        final recordJson = {
+          'userId': record.userId,
+          'date': record.date.toIso8601String(),
+          'morningBrushing': record.morningBrushing,
+          'eveningBrushing': record.eveningBrushing,
+          'usedFloss': record.usedFloss,
+          'usedMouthwash': record.usedMouthwash,
+          'notes': record.notes,
+        };
+
+        // API'ye kaydet
+        final success = await _apiService.saveDentalRecord(recordJson);
+        if (success) {
+          print('Record saved successfully to API');
+          return true;
+        }
+      } catch (apiError) {
+        print(
+            'Error saving record to API: $apiError, falling back to local storage');
+      }
+
+      // API'ye kaydedilemezse yerel depolamaya kaydet
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_storageKey);
 
@@ -189,22 +222,9 @@ class DentalTrackingService {
       final updatedJsonList = allRecords.map((r) => r.toJson()).toList();
       final updatedJsonString = jsonEncode(updatedJsonList);
 
-      // Debug için JSON boyutunu kontrol et
-      print('JSON size: ${updatedJsonString.length} characters');
-
       // SharedPreferences'a kaydet
       final saveResult = await prefs.setString(_storageKey, updatedJsonString);
-
       print('Save result: $saveResult');
-
-      // Kaydın başarılı olduğunu doğrula
-      final verifyJsonString = prefs.getString(_storageKey);
-      if (verifyJsonString != null) {
-        final verifyList = jsonDecode(verifyJsonString) as List;
-        print('Verification: ${verifyList.length} records saved successfully');
-      } else {
-        print('Verification failed: No data found after save');
-      }
 
       return true;
     } catch (e) {

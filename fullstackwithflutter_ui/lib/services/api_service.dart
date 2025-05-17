@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../models/doctor_model.dart';
 import '../models/appointment_model.dart';
 import '../models/activity.dart';
+import '../models/user_settings_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -1053,6 +1054,165 @@ class ApiService {
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Kullanıcı ayarlarını al
+  Future<UserSettings?> getUserSettings() async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      if (token == null) {
+        return null;
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/UserSettings/GetUserSettings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API'den gelen veri bir nesne ise
+        if (decodedData is Map &&
+            decodedData.containsKey('data') &&
+            decodedData['status'] == true) {
+          final settingsData = decodedData['data'];
+          return UserSettings.fromJson(settingsData);
+        }
+      }
+
+      // Varsayılan ayarları döndür
+      final userData = await getUserData();
+      if (userData != null && userData.containsKey('id')) {
+        return UserSettings(
+          userId: userData['id'],
+          isDarkMode: false,
+          fontFamily: 'Default',
+          fontSize: 1.0,
+          language: 'tr',
+        );
+      }
+
+      return null;
+    } catch (e) {
+      // Hata durumunda null dön
+      return null;
+    }
+  }
+
+  // Kullanıcı ayarlarını kaydet
+  Future<Map<String, dynamic>> saveUserSettings(UserSettings settings) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Oturum açılmamış',
+          'data': null,
+        };
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/UserSettings/SaveUserSettings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(settings.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        if (decodedData is Map && decodedData.containsKey('status')) {
+          return {
+            'success': decodedData['status'] == true,
+            'message': decodedData['message'] ?? 'Ayarlar kaydedildi',
+            'data': decodedData['data'],
+          };
+        }
+
+        return {
+          'success': true,
+          'message': 'Ayarlar kaydedildi',
+          'data': null,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Ayarlar kaydedilemedi: HTTP ${response.statusCode}',
+          'data': null,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // Kullanıcı ayarlarını güncelle
+  Future<Map<String, dynamic>> updateUserSettings(UserSettings settings) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Oturum açılmamış',
+          'data': null,
+        };
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/UserSettings/UpdateUserSettings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(settings.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        if (decodedData is Map && decodedData.containsKey('status')) {
+          return {
+            'success': decodedData['status'] == true,
+            'message': decodedData['message'] ?? 'Ayarlar güncellendi',
+            'data': decodedData['data'],
+          };
+        }
+
+        return {
+          'success': true,
+          'message': 'Ayarlar güncellendi',
+          'data': null,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Ayarlar güncellenemedi: HTTP ${response.statusCode}',
+          'data': null,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
     }
   }
 
@@ -2377,6 +2537,152 @@ class ApiService {
         'success': true,
         'message': 'Randevu başarıyla silindi (simülasyon)',
         'data': null,
+      };
+    }
+  }
+
+  // ==================== DENTAL TRACKING İŞLEMLERİ ====================
+
+  // Kullanıcının diş sağlığı takip kayıtlarını getir
+  Future<List<Map<String, dynamic>>> getUserDentalRecords(int userId) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/DentalTracking/user/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+          if (data is List) {
+            return List<Map<String, dynamic>>.from(data);
+          }
+        }
+        return [];
+      } else {
+        throw Exception('Hata: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error getting user dental records: $e');
+      return [];
+    }
+  }
+
+  // Kullanıcının belirli bir tarihteki diş sağlığı takip kaydını getir
+  Future<Map<String, dynamic>?> getUserDentalRecordByDate(
+      int userId, DateTime date) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      final response = await http.get(
+        Uri.parse(
+            '$baseUrl/DentalTracking/user/$userId/date?date=${date.toIso8601String()}'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+          if (data != null) {
+            return Map<String, dynamic>.from(data);
+          }
+        }
+        return null;
+      } else {
+        throw Exception('Hata: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error getting user dental record by date: $e');
+      return null;
+    }
+  }
+
+  // Kullanıcının diş sağlığı takip kaydını kaydet
+  Future<bool> saveDentalRecord(Map<String, dynamic> record) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/DentalTracking'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(record),
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('status')) {
+          return decodedData['status'] == true;
+        }
+        return response.statusCode == 200 || response.statusCode == 201;
+      } else {
+        throw Exception('Hata: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error saving dental record: $e');
+      return false;
+    }
+  }
+
+  // Kullanıcının diş sağlığı özet bilgilerini getir
+  Future<Map<String, dynamic>> getUserDentalSummary(int userId) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/DentalTracking/user/$userId/summary'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+          if (data != null) {
+            return Map<String, dynamic>.from(data);
+          }
+        }
+        return {
+          'brushingPercentage': 0.0,
+          'flossPercentage': 0.0,
+          'mouthwashPercentage': 0.0
+        };
+      } else {
+        throw Exception('Hata: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error getting user dental summary: $e');
+      return {
+        'brushingPercentage': 0.0,
+        'flossPercentage': 0.0,
+        'mouthwashPercentage': 0.0
       };
     }
   }

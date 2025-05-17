@@ -6,6 +6,7 @@ import '../../constants/app_theme.dart';
 import '../../widgets/user_list_item.dart';
 import '../../widgets/home/user_dashboard.dart';
 import '../../routes/app_routes.dart';
+import '../../screens/dental/dental_health_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -497,7 +498,23 @@ class HomeScreenState extends State<HomeScreen>
             title: const Text('Diş Sağlığı'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, AppRoutes.dentalHealth);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DentalHealthScreen(
+                    onRefresh: () {
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      _fetchCurrentUser();
+                      _fetchUpcomingAppointments();
+                      setState(() {
+                        _isLoading = false;
+                      });
+                    },
+                  ),
+                ),
+              );
             },
           ),
           ListTile(

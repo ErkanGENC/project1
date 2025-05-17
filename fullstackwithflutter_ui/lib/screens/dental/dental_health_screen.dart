@@ -6,7 +6,9 @@ import '../../services/dental_tracking_service.dart';
 
 /// Ağız ve diş sağlığı takip ekranı
 class DentalHealthScreen extends StatefulWidget {
-  const DentalHealthScreen({super.key});
+  final Function()? onRefresh;
+
+  const DentalHealthScreen({super.key, this.onRefresh});
 
   @override
   _DentalHealthScreenState createState() => _DentalHealthScreenState();
@@ -190,6 +192,11 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
             backgroundColor: Colors.green,
           ),
         );
+
+        // Ana sayfadaki özet bölümünün güncellenmesi için onRefresh callback'i çağır
+        if (widget.onRefresh != null) {
+          widget.onRefresh!();
+        }
 
         // Kayıt başarılı olduğunda, kullanıcıya görsel geri bildirim ver
         setState(() {

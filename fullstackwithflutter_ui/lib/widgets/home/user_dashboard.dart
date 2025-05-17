@@ -3,6 +3,7 @@ import '../../constants/app_theme.dart';
 import '../../models/appointment_model.dart';
 import '../../models/user_model.dart';
 import '../../routes/app_routes.dart';
+import '../../services/api_service.dart';
 import 'dental_health_tips.dart';
 
 class UserDashboard extends StatelessWidget {
@@ -347,44 +348,143 @@ class UserDashboard extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: _loadDentalSummary(),
+              builder: (context, snapshot) {
+                // Yükleniyor durumu
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                // Hata durumu
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Veriler yüklenirken bir hata oluştu',
+                        style: TextStyle(color: Colors.red[700]),
+                      ),
+                    ),
+                  );
+                }
+
+                // Veri yoksa
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildHealthIndicator(
+                            'Diş Fırçalama',
+                            Icons.brush,
+                            AppTheme.primaryColor,
+                            0.0,
+                          ),
+                          _buildHealthIndicator(
+                            'Diş İpi',
+                            Icons.linear_scale,
+                            AppTheme.accentColor,
+                            0.0,
+                          ),
+                          _buildHealthIndicator(
+                            'Gargara',
+                            Icons.local_drink,
+                            Colors.purple,
+                            0.0,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.pushNamed(
+                            context, AppRoutes.dentalHealth),
+                        icon: const Icon(Icons.medical_services),
+                        label: const Text('Detaylı Takip'),
+                      ),
+                    ],
+                  );
+                }
+
+                // Veri varsa
+                final data = snapshot.data!;
+                final brushingPercentage =
+                    data['brushingPercentage'] as double? ?? 0.0;
+                final flossPercentage =
+                    data['flossPercentage'] as double? ?? 0.0;
+                final mouthwashPercentage =
+                    data['mouthwashPercentage'] as double? ?? 0.0;
+
+                return Column(
                   children: [
-                    _buildHealthIndicator(
-                      'Diş Fırçalama',
-                      Icons.brush,
-                      AppTheme.primaryColor,
-                      0.7,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildHealthIndicator(
+                          'Diş Fırçalama',
+                          Icons.brush,
+                          AppTheme.primaryColor,
+                          brushingPercentage,
+                        ),
+                        _buildHealthIndicator(
+                          'Diş İpi',
+                          Icons.linear_scale,
+                          AppTheme.accentColor,
+                          flossPercentage,
+                        ),
+                        _buildHealthIndicator(
+                          'Gargara',
+                          Icons.local_drink,
+                          Colors.purple,
+                          mouthwashPercentage,
+                        ),
+                      ],
                     ),
-                    _buildHealthIndicator(
-                      'Diş İpi',
-                      Icons.linear_scale,
-                      AppTheme.accentColor,
-                      0.5,
-                    ),
-                    _buildHealthIndicator(
-                      'Gargara',
-                      Icons.local_drink,
-                      Colors.purple,
-                      0.3,
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          Navigator.pushNamed(context, AppRoutes.dentalHealth),
+                      icon: const Icon(Icons.medical_services),
+                      label: const Text('Detaylı Takip'),
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, AppRoutes.dentalHealth),
-                  icon: const Icon(Icons.medical_services),
-                  label: const Text('Detaylı Takip'),
-                ),
-              ],
+                );
+              },
             ),
           ),
         ),
       ],
     );
+  }
+
+  // Diş sağlığı özet verilerini yükle
+  Future<Map<String, dynamic>> _loadDentalSummary() async {
+    if (currentUser == null) {
+      return {
+        'brushingPercentage': 0.0,
+        'flossPercentage': 0.0,
+        'mouthwashPercentage': 0.0
+      };
+    }
+
+    try {
+      final ApiService apiService = ApiService();
+      final summary = await apiService.getUserDentalSummary(currentUser!.id);
+      return summary;
+    } catch (e) {
+      print('Error loading dental summary: $e');
+      return {
+        'brushingPercentage': 0.0,
+        'flossPercentage': 0.0,
+        'mouthwashPercentage': 0.0
+      };
+    }
   }
 
   Widget _buildHealthIndicator(

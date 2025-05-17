@@ -8,6 +8,7 @@ namespace FullstackWithFlutter.Core.Interfaces
 {
     public  interface IDatabaseInitializer
     {
+        Task InitializeDatabase();
         Task SeedSampData();
     }
 }

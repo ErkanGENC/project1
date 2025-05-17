@@ -11,6 +11,8 @@ namespace FullstackWithFlutter.Infrastructure.Repositories
         public IAppointmentRepository Appointments { get; }
         public IPasswordResetTokenRepository PasswordResetTokens { get; }
         public IActivityRepository Activities { get; }
+        public IDentalTrackingRepository DentalTrackings { get; }
+        public IUserSettingsRepository userSettings { get; }
 
         public UnitofWork(
             ApplicationDbContext applicationDbContext,
@@ -18,7 +20,9 @@ namespace FullstackWithFlutter.Infrastructure.Repositories
             IDoctorRepository doctorRepository,
             IAppointmentRepository appointmentRepository,
             IPasswordResetTokenRepository passwordResetTokenRepository,
-            IActivityRepository activityRepository)
+            IActivityRepository activityRepository,
+            IDentalTrackingRepository dentalTrackingRepository,
+            IUserSettingsRepository userSettingsRepository)
         {
             _dbContext = applicationDbContext;
             AppUsers = appUserRepository;
@@ -26,6 +30,8 @@ namespace FullstackWithFlutter.Infrastructure.Repositories
             Appointments = appointmentRepository;
             PasswordResetTokens = passwordResetTokenRepository;
             Activities = activityRepository;
+            DentalTrackings = dentalTrackingRepository;
+            userSettings = userSettingsRepository;
         }
 
         public int Complete()

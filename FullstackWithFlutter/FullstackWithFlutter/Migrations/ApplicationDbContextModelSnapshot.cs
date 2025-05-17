@@ -160,6 +160,52 @@ namespace FullstackWithFlutter.Migrations
                     b.ToTable("appointments");
                 });
 
+            modelBuilder.Entity("FullstackWithFlutter.Core.Models.DentalTracking", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("EveningBrushing")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("MorningBrushing")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("UsedFloss")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("UsedMouthwash")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("dentalTrackings");
+                });
+
             modelBuilder.Entity("FullstackWithFlutter.Core.Models.Doctor", b =>
                 {
                     b.Property<int>("Id")
@@ -233,6 +279,48 @@ namespace FullstackWithFlutter.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("passwordResetTokens");
+                });
+
+            modelBuilder.Entity("FullstackWithFlutter.Core.Models.UserSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FontFamily")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("FontSize")
+                        .HasColumnType("float");
+
+                    b.Property<bool>("IsDarkMode")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("userSettings");
                 });
 #pragma warning restore 612, 618
         }

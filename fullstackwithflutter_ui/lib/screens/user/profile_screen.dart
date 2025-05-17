@@ -500,6 +500,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           },
                         ),
 
+                        // Ayarlar
+                        ListTile(
+                          leading: const Icon(Icons.settings_outlined),
+                          title: const Text('Ayarlar'),
+                          trailing:
+                              const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: () {
+                            // Ayarlar sayfasına yönlendir
+                            Navigator.pushNamed(context, AppRoutes.settings);
+                          },
+                        ),
+
                         // Gizlilik politikası
                         ListTile(
                           leading: const Icon(Icons.privacy_tip_outlined),

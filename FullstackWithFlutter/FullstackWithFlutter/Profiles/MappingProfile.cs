@@ -16,6 +16,12 @@ namespace FullstackWithFlutter.Profiles
 
             CreateMap<Appointment, SaveAppointmentViewModel>().ReverseMap();
             CreateMap<Appointment, AppointmentViewModel>().ReverseMap();
+
+            CreateMap<DentalTracking, SaveDentalTrackingViewModel>().ReverseMap();
+            CreateMap<DentalTracking, DentalTrackingViewModel>().ReverseMap();
+
+            CreateMap<UserSettings, SaveUserSettingsViewModel>().ReverseMap();
+            CreateMap<UserSettings, UserSettingsViewModel>().ReverseMap();
         }
     }
 }
