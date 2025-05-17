@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../models/activity.dart';
+import '../../models/user_model.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin/dashboard_card.dart';
 import '../../widgets/admin/recent_activity_card.dart';
@@ -23,12 +24,90 @@ class AdminDashboardState extends State<AdminDashboard> {
   String _errorMessage = '';
   Map<String, dynamic> _dashboardData = {};
   List<Activity> _activities = [];
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
-    _loadActivities();
+    _checkAdminAccess();
+  }
+
+  // Admin erişim kontrolü
+  Future<void> _checkAdminAccess() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      // Mevcut kullanıcıyı al
+      final currentUser = await _apiService.getCurrentUser();
+
+      if (currentUser == null) {
+        // Kullanıcı oturum açmamış, giriş sayfasına yönlendir
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lütfen önce giriş yapın'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Kullanıcı rolünü kontrol et
+      final userRole = currentUser.role.toLowerCase();
+
+      if (userRole != 'admin') {
+        // Admin değilse, uygun sayfaya yönlendir
+        if (!mounted) return;
+
+        String redirectRoute = '/';
+        String message = 'Admin paneline erişim yetkiniz yok';
+
+        // Doktor kullanıcısı ise doktor paneline yönlendir
+        if (userRole == 'doctor') {
+          redirectRoute = '/doctor/dashboard';
+          message = 'Doktor paneline yönlendiriliyorsunuz';
+        }
+
+        Navigator.of(context).pushReplacementNamed(redirectRoute);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Admin kullanıcısı, verileri yükle
+      setState(() {
+        _currentUser = currentUser;
+      });
+
+      // Dashboard verilerini yükle
+      _loadDashboardData();
+      _loadActivities();
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Kullanıcı bilgileri alınırken bir hata oluştu: $e';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _loadDashboardData() async {
@@ -242,7 +321,23 @@ class AdminDashboardState extends State<AdminDashboard> {
               // Ayarlar sayfasına git
             },
           ),
-          const SizedBox(height: 100), // Spacer yerine SizedBox kullanıldı
+          ListTile(
+            leading: const Icon(Icons.cleaning_services),
+            title: const Text('Doktor Kullanıcılarını Temizle'),
+            onTap: () {
+              Navigator.pop(context);
+              _showCleanupDoctorUsersDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings),
+            title: const Text('Admin Kullanıcısı Oluştur'),
+            onTap: () {
+              Navigator.pop(context);
+              _showCreateAdminUserDialog();
+            },
+          ),
+          const SizedBox(height: 40), // Spacer yerine SizedBox kullanıldı
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -256,6 +351,290 @@ class AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 16),
         ],
+      ),
+    );
+  }
+
+  // Doktor kullanıcılarını temizleme dialog'u
+  Future<void> _showCleanupDoctorUsersDialog() async {
+    bool isLoading = false;
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Doktor Kullanıcılarını Temizle'),
+              content: SingleChildScrollView(
+                child: ListBody(
+                  children: <Widget>[
+                    const Text(
+                      'Bu işlem, doktor kullanıcılarını appUsers tablosundan temizleyecek ve sadece doctors tablosunda tutacaktır.',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Bu işlem, doktor kullanıcılarının kimlik doğrulama ve yönlendirme sorunlarını çözmek için gereklidir.',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Devam etmek istiyor musunuz?',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    if (isLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text('İptal'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          // Yükleniyor durumunu güncelle
+                          setState(() {
+                            isLoading = true;
+                          });
+
+                          try {
+                            // API isteğini yap
+                            final result =
+                                await _apiService.cleanupDoctorUsers();
+
+                            // Sonuç mesajını hazırla
+                            final String message =
+                                result['message'] ?? 'İşlem tamamlandı';
+                            final bool success = result['success'] ?? false;
+
+                            // Dialog'u kapat ve sonucu göster
+                            if (dialogContext.mounted) {
+                              _showResultAndCloseDialog(
+                                dialogContext: dialogContext,
+                                message: message,
+                                success: success,
+                              );
+                            }
+                          } catch (error) {
+                            // Yükleniyor durumunu güncelle
+                            setState(() {
+                              isLoading = false;
+                            });
+
+                            // Dialog'u kapat ve hatayı göster
+                            if (dialogContext.mounted) {
+                              _showResultAndCloseDialog(
+                                dialogContext: dialogContext,
+                                message: 'Bir hata oluştu: $error',
+                                success: false,
+                              );
+                            }
+                          }
+                        },
+                  child: const Text('Temizle'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Admin kullanıcısı oluşturma dialog'u
+  Future<void> _showCreateAdminUserDialog() async {
+    bool isLoading = false;
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController fullNameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Admin Kullanıcısı Oluştur'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: ListBody(
+                    children: <Widget>[
+                      const Text(
+                        'Bu işlem, yeni bir admin kullanıcısı oluşturacaktır.',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: fullNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Ad Soyad',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen ad soyad girin';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'E-posta',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen e-posta girin';
+                          }
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(value)) {
+                            return 'Geçerli bir e-posta adresi girin';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: passwordController,
+                        decoration: const InputDecoration(
+                          labelText: 'Şifre',
+                          border: OutlineInputBorder(),
+                        ),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen şifre girin';
+                          }
+                          if (value.length < 6) {
+                            return 'Şifre en az 6 karakter olmalıdır';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 16.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text('İptal'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          // Form doğrulama
+                          if (formKey.currentState!.validate()) {
+                            // Yükleniyor durumunu güncelle
+                            setState(() {
+                              isLoading = true;
+                            });
+
+                            // Admin kullanıcı verilerini hazırla
+                            final adminData = {
+                              'email': emailController.text,
+                              'password': passwordController.text,
+                              'fullName': fullNameController.text,
+                              'role': 'admin',
+                            };
+
+                            try {
+                              // API isteğini yap
+                              final result =
+                                  await _apiService.createAdminUser(adminData);
+
+                              // Sonuç mesajını hazırla
+                              final String message =
+                                  result['message'] ?? 'İşlem tamamlandı';
+                              final bool success = result['success'] ?? false;
+
+                              // Dialog'u kapat ve sonucu göster
+                              if (dialogContext.mounted) {
+                                _showResultAndCloseDialog(
+                                  dialogContext: dialogContext,
+                                  message: message,
+                                  success: success,
+                                );
+                              }
+                            } catch (error) {
+                              // Yükleniyor durumunu güncelle
+                              setState(() {
+                                isLoading = false;
+                              });
+
+                              // Dialog'u kapat ve hatayı göster
+                              if (dialogContext.mounted) {
+                                _showResultAndCloseDialog(
+                                  dialogContext: dialogContext,
+                                  message: 'Bir hata oluştu: $error',
+                                  success: false,
+                                );
+                              }
+                            }
+                          }
+                        },
+                  child: const Text('Oluştur'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Dialog'u kapat ve sonucu göster
+  void _showResultAndCloseDialog({
+    required BuildContext dialogContext,
+    required String message,
+    required bool success,
+  }) {
+    // Dialog'u kapat
+    Navigator.of(dialogContext).pop();
+
+    // Sonucu göster
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: success ? Colors.green : Colors.red,
+        duration: Duration(seconds: success ? 5 : 3),
       ),
     );
   }

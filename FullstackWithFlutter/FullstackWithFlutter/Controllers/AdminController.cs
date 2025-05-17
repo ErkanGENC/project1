@@ -12,8 +12,7 @@ namespace FullstackWithFlutter.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    // Geliştirme aşamasında yetkilendirmeyi geçici olarak kaldırıyoruz
-    // [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin")]
     public class AdminController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -154,6 +153,51 @@ namespace FullstackWithFlutter.Controllers
                 {
                     Status = false,
                     Message = "Dashboard verileri alınırken hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        [HttpPost("CreateAdminUser")]
+        [AllowAnonymous] // Sadece geliştirme aşamasında kullanılacak, sonra kaldırılacak
+        public async Task<IActionResult> CreateAdminUser(SaveAppUserViewModel adminViewModel)
+        {
+            try
+            {
+                _logger.LogInformation("CreateAdminUser endpoint called");
+
+                if (adminViewModel == null || string.IsNullOrEmpty(adminViewModel.Email) || string.IsNullOrEmpty(adminViewModel.Password))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email ve şifre gereklidir!",
+                        Data = null
+                    });
+                }
+
+                // Admin kullanıcısı oluştur
+                var result = await _userService.CreateAdminUser(adminViewModel);
+
+                if (result.Status)
+                {
+                    // Admin kullanıcısı oluşturuldu
+                    _logger.LogInformation("Admin user created successfully: {Email}", adminViewModel.Email);
+
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating admin user");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Admin kullanıcısı oluşturulurken bir hata oluştu: " + ex.Message,
                     Data = null
                 });
             }

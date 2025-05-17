@@ -32,12 +32,82 @@ namespace FullstackWithFlutter.Services
         {
             try
             {
-                // Önce AppUsers tablosunda kullanıcıyı ara
-                var users = await _unitofWork.AppUsers.Find(u => u.Email == loginViewModel.Email);
-                var user = users.FirstOrDefault();
+                // Önce Doctors tablosunda ara (doktor kullanıcıları için)
+                var doctors = await _unitofWork.Doctors.Find(d => d.Email == loginViewModel.Email);
+                var doctor = doctors.FirstOrDefault();
 
-                if (user != null)
+                if (doctor != null)
                 {
+                    // Doktor için şifre kontrolü
+                    if (!string.IsNullOrEmpty(doctor.Password) && !VerifyPassword(loginViewModel.Password, doctor.Password))
+                    {
+                        return new ApiResponse
+                        {
+                            Status = false,
+                            Message = "Hatalı şifre!",
+                            Data = null
+                        };
+                    }
+
+                    // Doktor için geçici bir AppUser nesnesi oluştur (sadece token oluşturmak için)
+                    var doctorUser = new AppUser
+                    {
+                        Id = doctor.Id,
+                        FullName = doctor.Name,
+                        Email = doctor.Email,
+                        MobileNumber = doctor.PhoneNumber,
+                        Role = "doctor", // Doktor rolünü belirt
+                        DoctorId = doctor.Id,
+                        DoctorName = doctor.Name,
+                        Specialization = doctor.Specialization,
+                        CreatedDate = doctor.CreatedDate,
+                        CreatedBy = doctor.CreatedBy,
+                        UpdatedDate = doctor.UpdatedDate,
+                        UpdatedBy = doctor.UpdatedBy
+                    };
+
+                    // Doktor bilgilerini döndür
+                    var doctorViewModel = _mapper.Map<AppUserViewModel>(doctorUser);
+
+                    // JWT token oluştur
+                    var token = GenerateJwtToken(doctorUser);
+
+                    // Aktivite kaydı
+                    await _activityService.LogDoctorActivity(
+                        type: "DoctorLogin",
+                        description: $"{doctor.Name} doktoru giriş yaptı",
+                        userId: doctor.Id,
+                        userName: doctor.Name,
+                        doctorId: doctor.Id
+                    );
+
+                    return new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Doktor girişi başarılı!",
+                        Data = new
+                        {
+                            user = doctorViewModel,
+                            token = token
+                        }
+                    };
+                }
+                else
+                {
+                    // Doctors tablosunda bulunamadıysa, AppUsers tablosunda ara (normal kullanıcılar için)
+                    var users = await _unitofWork.AppUsers.Find(u => u.Email == loginViewModel.Email);
+                    var user = users.FirstOrDefault();
+
+                    if (user == null)
+                    {
+                        return new ApiResponse
+                        {
+                            Status = false,
+                            Message = "Kullanıcı bulunamadı!",
+                            Data = null
+                        };
+                    }
+
                     // Şifreyi doğrula
                     if (!VerifyPassword(loginViewModel.Password, user.Password))
                     {
@@ -70,76 +140,6 @@ namespace FullstackWithFlutter.Services
                         Data = new
                         {
                             user = userViewModel,
-                            token = token
-                        }
-                    };
-                }
-                else
-                {
-                    // AppUsers tablosunda bulunamadıysa, Doctors tablosunda ara
-                    var doctors = await _unitofWork.Doctors.Find(d => d.Email == loginViewModel.Email);
-                    var doctor = doctors.FirstOrDefault();
-
-                    if (doctor == null)
-                    {
-                        return new ApiResponse
-                        {
-                            Status = false,
-                            Message = "Kullanıcı bulunamadı!",
-                            Data = null
-                        };
-                    }
-
-                    // Doktor için geçici bir AppUser nesnesi oluştur
-                    var doctorUser = new AppUser
-                    {
-                        Id = doctor.Id,
-                        FullName = doctor.Name,
-                        Email = doctor.Email,
-                        MobileNumber = doctor.PhoneNumber,
-                        Role = "doctor",
-                        DoctorId = doctor.Id,
-                        DoctorName = doctor.Name,
-                        Specialization = doctor.Specialization,
-                        CreatedDate = doctor.CreatedDate,
-                        CreatedBy = doctor.CreatedBy,
-                        UpdatedDate = doctor.UpdatedDate,
-                        UpdatedBy = doctor.UpdatedBy
-                    };
-
-                    // Doktor için şifre kontrolü
-                    if (!string.IsNullOrEmpty(doctor.Password) && !VerifyPassword(loginViewModel.Password, doctor.Password))
-                    {
-                        return new ApiResponse
-                        {
-                            Status = false,
-                            Message = "Hatalı şifre!",
-                            Data = null
-                        };
-                    }
-
-                    // Kullanıcı bilgilerini döndür
-                    var doctorViewModel = _mapper.Map<AppUserViewModel>(doctorUser);
-
-                    // JWT token oluştur
-                    var token = GenerateJwtToken(doctorUser);
-
-                    // Aktivite kaydı
-                    await _activityService.LogDoctorActivity(
-                        type: "DoctorLogin",
-                        description: $"{doctor.Name} doktoru giriş yaptı",
-                        userId: doctor.Id,
-                        userName: doctor.Name,
-                        doctorId: doctor.Id
-                    );
-
-                    return new ApiResponse
-                    {
-                        Status = true,
-                        Message = "Doktor girişi başarılı!",
-                        Data = new
-                        {
-                            user = doctorViewModel,
                             token = token
                         }
                     };
@@ -752,6 +752,26 @@ namespace FullstackWithFlutter.Services
             var random = new Random();
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        // Rol bazlı kullanıcı sorgulama
+        public async Task<List<AppUserViewModel>> GetUsersByRole(string role)
+        {
+            try
+            {
+                // Belirli role sahip kullanıcıları bul
+                var users = await _unitofWork.AppUsers.Find(u => u.Role == role);
+
+                // Kullanıcıları ViewModel'e dönüştür
+                var userViewModels = _mapper.Map<List<AppUserViewModel>>(users);
+
+                return userViewModels;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting users by role: {Role}", role);
+                return new List<AppUserViewModel>();
+            }
         }
     }
 }

@@ -282,7 +282,17 @@ class ApiService {
 
             // Kullanıcı bilgilerini kaydet
             if (responseData.containsKey('user')) {
-              await saveUserData(responseData['user'] as Map<String, dynamic>);
+              final userData = responseData['user'] as Map<String, dynamic>;
+
+              // Doktor ID'si varsa, role'ü doctor olarak ayarla
+              if (userData.containsKey('doctorId') &&
+                  userData['doctorId'] != null &&
+                  userData['doctorId'] is int &&
+                  userData['doctorId'] > 0) {
+                userData['role'] = 'doctor';
+              }
+
+              await saveUserData(userData);
             } else {
               // Eğer API kullanıcı bilgilerini dönmüyorsa, email'i kaydedelim
               await saveUserData({
@@ -298,7 +308,17 @@ class ApiService {
 
           // Kullanıcı bilgilerini kaydet
           if (data.containsKey('user')) {
-            await saveUserData(data['user'] as Map<String, dynamic>);
+            final userData = data['user'] as Map<String, dynamic>;
+
+            // Doktor ID'si varsa, role'ü doctor olarak ayarla
+            if (userData.containsKey('doctorId') &&
+                userData['doctorId'] != null &&
+                userData['doctorId'] is int &&
+                userData['doctorId'] > 0) {
+              userData['role'] = 'doctor';
+            }
+
+            await saveUserData(userData);
           } else {
             // Eğer API kullanıcı bilgilerini dönmüyorsa, email'i kaydedelim
             await saveUserData({
@@ -323,11 +343,11 @@ class ApiService {
             }
 
             // Kullanıcı bilgilerini al
-            final userResult = await getCurrentUser();
+            final currentUser = await getCurrentUser();
 
-            if (userResult['success'] && userResult['data'] != null) {
+            if (currentUser != null) {
               // Kullanıcı bilgilerini güncelle
-              await saveUserData(userResult['data'] as Map<String, dynamic>);
+              await saveUserData(currentUser.toJson());
             }
           } catch (e) {
             // Hata durumunda bir şey yapma, en azından giriş yapılmış olsun
@@ -747,190 +767,6 @@ class ApiService {
     }
   }
 
-  // Mevcut kullanıcı bilgilerini al
-  Future<Map<String, dynamic>> getCurrentUser() async {
-    try {
-      // Token'i al
-      final token = await getToken();
-
-      if (token == null) {
-        return {
-          'success': false,
-          'message': 'Oturum açılmamış',
-          'data': null,
-        };
-      }
-
-      // Önce normal kullanıcı olarak deneyelim
-      final response = await http.get(
-        Uri.parse('$baseUrl/Users/GetCurrentUser'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final dynamic responseData =
-            jsonDecode(utf8.decode(response.bodyBytes));
-
-        // API yanıt formatını kontrol et
-        if (responseData is Map && responseData.containsKey('data')) {
-          // Yeni API formatı (ApiResponse sınıfı)
-          final userData = responseData['data'];
-
-          // Kullanıcı ID'sini ekleyelim
-          if (userData is Map) {
-            if (!userData.containsKey('id') &&
-                responseData.containsKey('userId')) {
-              userData['id'] = responseData['userId'];
-            }
-
-            // Doktor bilgilerini kontrol et
-            if (userData.containsKey('role') && userData['role'] == 'doctor') {
-              // Doktor kullanıcısı tespit edildi: ${userData['email']}
-            }
-          }
-
-          return {
-            'success': responseData['status'] == true,
-            'message': responseData['message'] ?? 'Kullanıcı bilgileri alındı',
-            'data': userData,
-          };
-        } else {
-          // Eski format veya farklı bir format
-          // Kullanıcı ID'sini ekleyelim
-          if (responseData is Map && !responseData.containsKey('id')) {
-            // Token'dan kullanıcı ID'sini çıkarmaya çalış
-            {
-              try {
-                // JWT token'ı decode et (basit bir yöntem)
-                final parts = token.split('.');
-                if (parts.length == 3) {
-                  final payload = parts[1];
-                  final normalized = base64Url.normalize(payload);
-                  final decoded = utf8.decode(base64Url.decode(normalized));
-                  final payloadMap =
-                      jsonDecode(decoded) as Map<String, dynamic>;
-
-                  // userId claim'ini kontrol et
-                  if (payloadMap.containsKey('userId')) {
-                    responseData['id'] =
-                        int.parse(payloadMap['userId'].toString());
-                  }
-
-                  // role claim'ini kontrol et
-                  if (payloadMap.containsKey('role')) {
-                    responseData['role'] = payloadMap['role'];
-                  }
-                }
-              } catch (e) {
-                // Token decode edilemezse bir şey yapma
-              }
-            }
-          }
-
-          return {
-            'success': true,
-            'message': 'Kullanıcı bilgileri alındı',
-            'data': responseData,
-          };
-        }
-      } else {
-        // Kullanıcı bulunamadıysa, doktor olarak deneyelim
-        try {
-          final doctorResponse = await http.get(
-            Uri.parse('$baseUrl/Doctors/GetCurrentDoctor'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-          );
-
-          if (doctorResponse.statusCode == 200) {
-            final dynamic doctorData =
-                jsonDecode(utf8.decode(doctorResponse.bodyBytes));
-
-            // Doktor verilerini düzenle
-            if (doctorData is Map) {
-              // Rol bilgisini ekle
-              doctorData['role'] = 'doctor';
-
-              // ID kontrolü
-              if (!doctorData.containsKey('id') &&
-                  doctorData.containsKey('doctorId')) {
-                doctorData['id'] = doctorData['doctorId'];
-              }
-
-              return {
-                'success': true,
-                'message': 'Doktor bilgileri alındı',
-                'data': doctorData,
-              };
-            }
-          }
-        } catch (e) {
-          // Doktor bilgileri alınırken hata: $e
-        }
-
-        // JWT token'dan bilgileri çıkarmaya çalış
-        try {
-          {
-            final parts = token.split('.');
-            if (parts.length == 3) {
-              final payload = parts[1];
-              final normalized = base64Url.normalize(payload);
-              final decoded = utf8.decode(base64Url.decode(normalized));
-              final payloadMap = jsonDecode(decoded) as Map<String, dynamic>;
-
-              // Temel kullanıcı bilgilerini oluştur
-              final userData = <String, dynamic>{
-                'id': payloadMap.containsKey('userId')
-                    ? int.parse(payloadMap['userId'].toString())
-                    : 0,
-                'email':
-                    payloadMap.containsKey('email') ? payloadMap['email'] : '',
-                'fullName': payloadMap.containsKey('fullName')
-                    ? payloadMap['fullName']
-                    : payloadMap.containsKey('name')
-                        ? payloadMap['name']
-                        : '',
-                'role': payloadMap.containsKey('role')
-                    ? payloadMap['role']
-                    : 'doctor',
-                'specialization': payloadMap.containsKey('specialization')
-                    ? payloadMap['specialization']
-                    : '',
-              };
-
-              return {
-                'success': true,
-                'message': 'Token bilgileri alındı',
-                'data': userData,
-              };
-            }
-          }
-        } catch (e) {
-          // Token çözümlenirken hata: $e
-        }
-
-        return {
-          'success': false,
-          'message': 'Kullanıcı bilgileri alınamadı: ${response.statusCode}',
-          'data': null,
-        };
-      }
-    } catch (e) {
-      // Hata durumunu loglama
-      // getCurrentUser hata: $e
-      return {
-        'success': false,
-        'message': 'API bağlantı hatası: $e',
-        'data': null,
-      };
-    }
-  }
-
   // Kullanıcı bilgilerini kaydet (SharedPreferences'a)
   Future<void> saveUserData(Map<String, dynamic> userData) async {
     try {
@@ -1131,6 +967,82 @@ class ApiService {
     return null;
   }
 
+  // Mevcut kullanıcıyı getir (User nesnesi olarak)
+  Future<User?> getCurrentUser() async {
+    try {
+      // Önce yerel depolamadan kullanıcı bilgilerini al
+      final userData = await getUserData();
+
+      if (userData != null) {
+        // Kullanıcı bilgileri varsa, User nesnesine dönüştür
+        final user = User.fromJson(userData);
+
+        // Doktor ID'si varsa doktor rolünü zorla
+        if (user.doctorId != null && user.doctorId! > 0) {
+          user.role = 'doctor';
+        }
+
+        return user;
+      }
+
+      // Yerel depolamada kullanıcı bilgileri yoksa, API'den al
+      final token = await getToken();
+
+      if (token == null) {
+        // Token yoksa, kullanıcı oturum açmamış demektir
+        return null;
+      }
+
+      // API'den kullanıcı bilgilerini al
+      final response = await http.get(
+        Uri.parse('$baseUrl/Users/GetCurrentUser'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API'den gelen veri bir nesne ise
+        if (decodedData is Map) {
+          Map<String, dynamic> userData = {};
+
+          // API yanıt formatını kontrol et
+          if (decodedData.containsKey('data') &&
+              decodedData['status'] == true) {
+            userData = Map<String, dynamic>.from(decodedData['data']);
+          } else {
+            userData = Map<String, dynamic>.from(decodedData);
+          }
+
+          // Kullanıcı bilgilerini kaydet
+          await saveUserData(userData);
+
+          // User nesnesine dönüştür
+          final user = User.fromJson(userData);
+
+          // Doktor ID'si varsa doktor rolünü zorla
+          if (user.doctorId != null && user.doctorId! > 0) {
+            user.role = 'doctor';
+
+            // Kullanıcı verilerini güncelle
+            final updatedUserData = user.toJson();
+            await saveUserData(updatedUserData);
+          }
+
+          return user;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      // Hata durumunda null dön
+      return null;
+    }
+  }
+
   // Çıkış yap (Logout)
   Future<bool> logout() async {
     try {
@@ -1141,6 +1053,211 @@ class ApiService {
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Doktor kullanıcılarını temizle
+  Future<Map<String, dynamic>> cleanupDoctorUsers() async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Oturum açılmamış',
+          'data': null,
+        };
+      }
+
+      // API'ye istek gönder
+      final response = await http.post(
+        Uri.parse('$baseUrl/Doctors/CleanupDoctorUsers'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      // API yanıtını işle
+      if (response.statusCode == 200) {
+        final dynamic responseData =
+            jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (responseData is Map && responseData.containsKey('status')) {
+          return {
+            'success': responseData['status'] == true,
+            'message':
+                responseData['message'] ?? 'Doktor kullanıcıları temizlendi',
+            'data': responseData['data'],
+          };
+        } else {
+          return {
+            'success': true,
+            'message': 'Doktor kullanıcıları temizlendi',
+            'data': responseData,
+          };
+        }
+      } else {
+        // Hata durumu
+        try {
+          final dynamic errorData = jsonDecode(utf8.decode(response.bodyBytes));
+          return {
+            'success': false,
+            'message': errorData['message'] ??
+                'Doktor kullanıcıları temizlenemedi: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'message':
+                'Doktor kullanıcıları temizlenemedi: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // İlk admin kullanıcısı oluştur
+  Future<Map<String, dynamic>> createFirstAdmin(
+      Map<String, dynamic> adminData) async {
+    try {
+      // API'ye istek gönder
+      final response = await http.post(
+        Uri.parse('$baseUrl/Auth/CreateFirstAdmin'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(adminData),
+      );
+
+      // API yanıtını işle
+      if (response.statusCode == 200) {
+        final dynamic responseData =
+            jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (responseData is Map && responseData.containsKey('status')) {
+          return {
+            'success': responseData['status'] == true,
+            'message':
+                responseData['message'] ?? 'Admin kullanıcısı oluşturuldu',
+            'data': responseData['data'],
+          };
+        } else {
+          return {
+            'success': true,
+            'message': 'Admin kullanıcısı oluşturuldu',
+            'data': responseData,
+          };
+        }
+      } else {
+        // Hata durumu
+        try {
+          final dynamic errorData = jsonDecode(utf8.decode(response.bodyBytes));
+          return {
+            'success': false,
+            'message': errorData['message'] ??
+                'Admin kullanıcısı oluşturulamadı: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'message':
+                'Admin kullanıcısı oluşturulamadı: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // Admin kullanıcısı oluştur (sadece admin kullanıcıları için)
+  Future<Map<String, dynamic>> createAdminUser(
+      Map<String, dynamic> adminData) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Oturum açılmamış',
+          'data': null,
+        };
+      }
+
+      // API'ye istek gönder
+      final response = await http.post(
+        Uri.parse('$baseUrl/Auth/CreateAdminUser'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(adminData),
+      );
+
+      // API yanıtını işle
+      if (response.statusCode == 200) {
+        final dynamic responseData =
+            jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (responseData is Map && responseData.containsKey('status')) {
+          return {
+            'success': responseData['status'] == true,
+            'message':
+                responseData['message'] ?? 'Admin kullanıcısı oluşturuldu',
+            'data': responseData['data'],
+          };
+        } else {
+          return {
+            'success': true,
+            'message': 'Admin kullanıcısı oluşturuldu',
+            'data': responseData,
+          };
+        }
+      } else {
+        // Hata durumu
+        try {
+          final dynamic errorData = jsonDecode(utf8.decode(response.bodyBytes));
+          return {
+            'success': false,
+            'message': errorData['message'] ??
+                'Admin kullanıcısı oluşturulamadı: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'message':
+                'Admin kullanıcısı oluşturulamadı: HTTP ${response.statusCode}',
+            'data': null,
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
     }
   }
 

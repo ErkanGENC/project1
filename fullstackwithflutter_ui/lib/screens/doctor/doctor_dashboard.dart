@@ -34,70 +34,133 @@ class DoctorDashboardState extends State<DoctorDashboard> {
     });
 
     try {
-      // Mevcut kullanıcı bilgilerini al
-      final userResult = await _apiService.getCurrentUser();
-      if (userResult['success'] && userResult['data'] != null) {
-        final currentUser = User.fromJson(userResult['data']);
+      // Mevcut kullanıcıyı al
+      final currentUser = await _apiService.getCurrentUser();
 
-        // Kullanıcı doktor mu kontrol et
-        if (currentUser.role != 'doctor') {
-          setState(() {
-            _errorMessage =
-                'Bu sayfaya erişim yetkiniz yok. Kullanıcı rolü: ${currentUser.role}';
-            _isLoading = false;
-          });
-          return;
+      if (currentUser == null) {
+        // Kullanıcı oturum açmamış, giriş sayfasına yönlendir
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lütfen önce giriş yapın'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Kullanıcı rolünü kontrol et
+      final userRole = currentUser.role.toLowerCase();
+
+      if (userRole != 'doctor') {
+        // Doktor değilse, uygun sayfaya yönlendir
+        if (!mounted) return;
+
+        String redirectRoute = '/';
+        String message = 'Doktor paneline erişim yetkiniz yok';
+
+        // Admin kullanıcısı ise admin paneline yönlendir
+        if (userRole == 'admin') {
+          redirectRoute = '/admin/dashboard';
+          message = 'Admin paneline yönlendiriliyorsunuz';
         }
 
-        _currentDoctor = currentUser;
-
-        // Tüm randevuları al
-        final appointments = await _apiService.getAllAppointments();
-
-        // Doktorun randevularını filtrele
-        _doctorAppointments = appointments.where((appointment) {
-          // Doktor adı ile eşleşen randevuları bul
-          if (appointment.doctorName.toLowerCase() ==
-              _currentDoctor!.fullName.toLowerCase()) {
-            return true;
-          }
-
-          // Doktor ID'si ile eşleşen randevuları bul
-          if (appointment.doctorId != null &&
-              appointment.doctorId == _currentDoctor!.id) {
-            return true;
-          }
-
-          return false;
-        }).toList();
-
-        // Debug bilgileri
-        // Doktor: ${_currentDoctor!.fullName}, ID: ${_currentDoctor!.id}
-        // Toplam randevu sayısı: ${appointments.length}
-        // Doktora ait randevu sayısı: ${_doctorAppointments.length}
-
-        // Dashboard verilerini hazırla
-        final todayAppointments = _getTodayAppointments(_doctorAppointments);
-        final pendingAppointments =
-            _getPendingAppointments(_doctorAppointments);
-
-        setState(() {
-          _dashboardData = {
-            'totalAppointments': _doctorAppointments.length,
-            'todayAppointments': todayAppointments.length,
-            'pendingAppointments': pendingAppointments.length,
-            'completedAppointments': _doctorAppointments
-                .where((a) => a.status.toLowerCase() == 'tamamlandı')
-                .length,
-          };
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMessage = 'Kullanıcı bilgileri alınamadı.';
-          _isLoading = false;
-        });
+        Navigator.of(context).pushReplacementNamed(redirectRoute);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
       }
+
+      _currentDoctor = currentUser;
+
+      // Tüm randevuları al
+      final appointments = await _apiService.getAllAppointments();
+
+      // Doktorun randevularını filtrele
+      _doctorAppointments = appointments.where((appointment) {
+        // Doktor adı ile eşleşen randevuları bul
+        if (appointment.doctorName.toLowerCase() ==
+            _currentDoctor!.fullName.toLowerCase()) {
+          return true;
+        }
+
+        // Doktor ID'si ile eşleşen randevuları bul
+        if (appointment.doctorId != null &&
+            appointment.doctorId == _currentDoctor!.id) {
+          return true;
+        }
+
+        // DoctorId alanı ile eşleşen randevuları bul
+        if (_currentDoctor!.doctorId != null &&
+            _currentDoctor!.doctorId! > 0 &&
+            appointment.doctorId != null &&
+            appointment.doctorId == _currentDoctor!.doctorId) {
+          return true;
+        }
+
+        return false;
+      }).toList();
+
+      // Debug bilgileri
+      // Doktor: ${_currentDoctor!.fullName}, ID: ${_currentDoctor!.id}
+      // Toplam randevu sayısı: ${appointments.length}
+      // Doktora ait randevu sayısı: ${_doctorAppointments.length}
+
+      // Dashboard verilerini hazırla
+      final todayAppointments = _getTodayAppointments(_doctorAppointments);
+      final pendingAppointments = _getPendingAppointments(_doctorAppointments);
+      final completedAppointments = _doctorAppointments
+          .where((a) => a.status.toLowerCase() == 'tamamlandı')
+          .length;
+
+      // Hasta sayısını hesapla (benzersiz hasta e-postaları)
+      final uniquePatientEmails = _doctorAppointments
+          .map((appointment) => appointment.patientEmail)
+          .toSet();
+      final patientCount = uniquePatientEmails.length;
+
+      // Son 7 gündeki randevuları hesapla
+      final now = DateTime.now();
+      final lastWeek = now.subtract(const Duration(days: 7));
+      final lastWeekAppointments = _doctorAppointments
+          .where((appointment) => appointment.date.isAfter(lastWeek))
+          .length;
+
+      // Artış oranlarını hesapla
+      String calculateIncrease(int current, int previous) {
+        if (previous == 0) return '+0%';
+        final increase = ((current - previous) / previous * 100).toInt();
+        return increase >= 0 ? '+$increase%' : '$increase%';
+      }
+
+      // Önceki hafta ile karşılaştırma için varsayılan değerler
+      // Gerçek uygulamada bu veriler veritabanından alınabilir
+      final previousWeekAppointments =
+          lastWeekAppointments > 0 ? (lastWeekAppointments * 0.8).toInt() : 0;
+      final previousPatientCount =
+          patientCount > 0 ? (patientCount * 0.9).toInt() : 0;
+
+      setState(() {
+        _dashboardData = {
+          'totalAppointments': _doctorAppointments.length,
+          'todayAppointments': todayAppointments.length,
+          'pendingAppointments': pendingAppointments.length,
+          'completedAppointments': completedAppointments,
+          'patientCount': patientCount,
+          'totalAppointmentsIncrease': calculateIncrease(
+              _doctorAppointments.length, previousWeekAppointments),
+          'patientCountIncrease':
+              calculateIncrease(patientCount, previousPatientCount),
+        };
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Veri yüklenirken bir hata oluştu: $e';
@@ -278,7 +341,9 @@ class DoctorDashboardState extends State<DoctorDashboard> {
                   value: _dashboardData['totalAppointments']?.toString() ?? '0',
                   icon: Icons.calendar_month,
                   color: AppTheme.primaryColor,
-                  increase: '+0%',
+                  increase:
+                      _dashboardData['totalAppointmentsIncrease']?.toString() ??
+                          '+0%',
                 ),
               ),
               const SizedBox(width: 16),
@@ -319,6 +384,22 @@ class DoctorDashboardState extends State<DoctorDashboard> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: StatsCard(
+                  title: 'Toplam Hasta',
+                  value: _dashboardData['patientCount']?.toString() ?? '0',
+                  icon: Icons.people,
+                  color: Colors.purple,
+                  increase:
+                      _dashboardData['patientCountIncrease']?.toString() ??
+                          '+0%',
+                ),
+              ),
+            ],
+          ),
 
           const SizedBox(height: 32),
           Text(
@@ -332,6 +413,19 @@ class DoctorDashboardState extends State<DoctorDashboard> {
 
           // Bugünkü randevular listesi
           _buildTodayAppointmentsList(),
+
+          const SizedBox(height: 32),
+          Text(
+            'Son Aktiviteler',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
+          ),
+          const SizedBox(height: 16),
+
+          // Son aktiviteler listesi
+          _buildRecentActivitiesList(),
         ],
       ),
     );
@@ -492,6 +586,107 @@ class DoctorDashboardState extends State<DoctorDashboard> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRecentActivitiesList() {
+    // Son 5 randevuyu göster (en yeniden en eskiye)
+    final recentAppointments = List<Appointment>.from(_doctorAppointments)
+      ..sort((a, b) =>
+          b.date.compareTo(a.date)); // Tarihe göre sırala (en yeni en üstte)
+
+    final activities = recentAppointments.take(5).toList();
+
+    if (activities.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(
+            child: Text(
+              'Henüz aktivite bulunmamaktadır',
+              style: TextStyle(
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: activities.map((activity) {
+        // Aktivite tipi ve rengi
+        IconData activityIcon;
+        Color activityColor;
+        String activityText;
+
+        // Randevu durumuna göre aktivite bilgilerini belirle
+        switch (activity.status.toLowerCase()) {
+          case 'bekleyen':
+            activityIcon = Icons.pending_actions;
+            activityColor = AppTheme.warningColor;
+            activityText =
+                '${activity.patientName} için yeni randevu oluşturuldu';
+            break;
+          case 'onaylandı':
+            activityIcon = Icons.check_circle;
+            activityColor = Colors.green;
+            activityText = '${activity.patientName} için randevu onaylandı';
+            break;
+          case 'iptal edildi':
+            activityIcon = Icons.cancel;
+            activityColor = Colors.red;
+            activityText = '${activity.patientName} için randevu iptal edildi';
+            break;
+          case 'tamamlandı':
+            activityIcon = Icons.done_all;
+            activityColor = AppTheme.successColor;
+            activityText = '${activity.patientName} için randevu tamamlandı';
+            break;
+          default:
+            activityIcon = Icons.event_note;
+            activityColor = Colors.blue;
+            activityText = '${activity.patientName} için randevu güncellendi';
+        }
+
+        // Tarih formatı
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final activityDate = DateTime(
+            activity.date.year, activity.date.month, activity.date.day);
+
+        String dateText;
+        if (activityDate.isAtSameMomentAs(today)) {
+          dateText = 'Bugün, ${activity.time}';
+        } else if (activityDate
+            .isAtSameMomentAs(today.subtract(const Duration(days: 1)))) {
+          dateText = 'Dün, ${activity.time}';
+        } else {
+          dateText =
+              '${activity.date.day}/${activity.date.month}/${activity.date.year}, ${activity.time}';
+        }
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Color.fromRGBO(activityColor.red & 0xFF,
+                  activityColor.green & 0xFF, activityColor.blue & 0xFF, 0.2),
+              child: Icon(activityIcon, color: activityColor, size: 20),
+            ),
+            title: Text(activityText),
+            subtitle: Text(dateText),
+            trailing: Text(
+              activity.type,
+              style: TextStyle(
+                color: activityColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 

@@ -1,4 +1,5 @@
 using FullstackWithFlutter.Core.ViewModels;
+using System.Collections.Generic;
 
 namespace FullstackWithFlutter.Services.Interfaces
 {
@@ -14,5 +15,8 @@ namespace FullstackWithFlutter.Services.Interfaces
         Task<ApiResponse> SendPasswordResetEmail(string email);
         Task<ApiResponse> VerifyResetCode(string email, string resetCode);
         Task<ApiResponse> ResetPasswordWithToken(string email, string resetCode, string newPassword);
+
+        // Rol bazlı kullanıcı sorgulama
+        Task<List<AppUserViewModel>> GetUsersByRole(string role);
     }
 }

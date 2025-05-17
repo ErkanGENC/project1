@@ -8,7 +8,7 @@ class User {
   final int? doctorId;
   final String? doctorName;
   final String? specialization;
-  final String role; // Kullanıcı rolü: 'user', 'doctor', 'admin'
+  String role; // Kullanıcı rolü: 'user', 'doctor', 'admin'
 
   User({
     required this.id,

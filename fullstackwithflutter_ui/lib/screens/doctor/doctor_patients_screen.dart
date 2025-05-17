@@ -41,70 +41,101 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
     });
 
     try {
-      // Mevcut kullanıcı bilgilerini al
-      final userResult = await _apiService.getCurrentUser();
-      if (userResult['success'] && userResult['data'] != null) {
-        // Doktor bilgilerini al
-        _currentDoctor = User.fromJson(userResult['data']);
+      // Mevcut kullanıcıyı al
+      final currentUser = await _apiService.getCurrentUser();
 
-        // Doktor bilgilerini kontrol et
-        if (_currentDoctor == null) {
-          setState(() {
-            _errorMessage = 'Doktor bilgileri alınamadı.';
-            _isLoading = false;
-          });
-          return;
+      if (currentUser == null) {
+        // Kullanıcı oturum açmamış, giriş sayfasına yönlendir
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lütfen önce giriş yapın'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Kullanıcı rolünü kontrol et
+      final userRole = currentUser.role.toLowerCase();
+
+      if (userRole != 'doctor') {
+        // Doktor değilse, uygun sayfaya yönlendir
+        if (!mounted) return;
+
+        String redirectRoute = '/';
+        String message = 'Doktor paneline erişim yetkiniz yok';
+
+        // Admin kullanıcısı ise admin paneline yönlendir
+        if (userRole == 'admin') {
+          redirectRoute = '/admin/dashboard';
+          message = 'Admin paneline yönlendiriliyorsunuz';
         }
 
-        // Tüm randevuları al
-        final allAppointments = await _apiService.getAllAppointments();
-
-        // Doktorun randevularını filtrele
-        _appointments = allAppointments.where((appointment) {
-          // Doktor adı ile eşleşen randevuları bul
-          if (appointment.doctorName.toLowerCase() ==
-              _currentDoctor!.fullName.toLowerCase()) {
-            return true;
-          }
-
-          // Doktor ID'si ile eşleşen randevuları bul
-          if (appointment.doctorId != null &&
-              appointment.doctorId == _currentDoctor!.id) {
-            return true;
-          }
-
-          return false;
-        }).toList();
-
-        // Tüm hastaları al
-        final allUsers = await _apiService.getAllUsers();
-
-        // Sadece hastaları filtrele (doktor ve admin olmayanlar)
-        final patients = allUsers
-            .where((user) => user.role.toLowerCase() == 'user')
-            .toList();
-
-        // Doktorun hastalarını bul (randevusu olan hastalar)
-        final patientEmails = _appointments
-            .map((appointment) => appointment.patientEmail)
-            .toSet();
-
-        // Doktorun hastalarını filtrele
-        _allPatients = patients
-            .where((patient) => patientEmails.contains(patient.email))
-            .toList();
-
-        _filteredPatients = List.from(_allPatients);
-
-        setState(() {
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMessage = 'Kullanıcı bilgileri alınamadı.';
-          _isLoading = false;
-        });
+        Navigator.of(context).pushReplacementNamed(redirectRoute);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
       }
+
+      _currentDoctor = currentUser;
+
+      // Tüm randevuları al
+      final allAppointments = await _apiService.getAllAppointments();
+
+      // Doktorun randevularını filtrele
+      _appointments = allAppointments.where((appointment) {
+        // Doktor adı ile eşleşen randevuları bul
+        if (appointment.doctorName.toLowerCase() ==
+            _currentDoctor!.fullName.toLowerCase()) {
+          return true;
+        }
+
+        // Doktor ID'si ile eşleşen randevuları bul
+        if (appointment.doctorId != null &&
+            appointment.doctorId == _currentDoctor!.id) {
+          return true;
+        }
+
+        // DoctorId alanı ile eşleşen randevuları bul
+        if (_currentDoctor!.doctorId != null &&
+            _currentDoctor!.doctorId! > 0 &&
+            appointment.doctorId != null &&
+            appointment.doctorId == _currentDoctor!.doctorId) {
+          return true;
+        }
+
+        return false;
+      }).toList();
+
+      // Tüm hastaları al
+      final allUsers = await _apiService.getAllUsers();
+
+      // Sadece hastaları filtrele (doktor ve admin olmayanlar)
+      final patients =
+          allUsers.where((user) => user.role.toLowerCase() == 'user').toList();
+
+      // Doktorun hastalarını bul (randevusu olan hastalar)
+      final patientEmails =
+          _appointments.map((appointment) => appointment.patientEmail).toSet();
+
+      // Doktorun hastalarını filtrele
+      _allPatients = patients
+          .where((patient) => patientEmails.contains(patient.email))
+          .toList();
+
+      _filteredPatients = List.from(_allPatients);
+
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Veri yüklenirken bir hata oluştu: $e';

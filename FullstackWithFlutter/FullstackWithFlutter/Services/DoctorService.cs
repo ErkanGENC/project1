@@ -10,11 +10,13 @@ namespace FullstackWithFlutter.Services
     {
         private readonly IUnitofWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ILogger<DoctorService> _logger;
 
-        public DoctorService(IUnitofWork unitOfWork, IMapper mapper)
+        public DoctorService(IUnitofWork unitOfWork, IMapper mapper, ILogger<DoctorService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<bool> CreateDoctor(SaveDoctorViewModel doctorViewModel)
@@ -197,6 +199,73 @@ namespace FullstackWithFlutter.Services
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// AppUsers tablosundaki tüm doktor kullanıcılarını temizler.
+        /// Bu metod, doktor kullanıcılarının sadece doctors tablosunda tutulmasını sağlar.
+        /// </summary>
+        /// <returns>Temizlenen kullanıcı sayısı</returns>
+        public async Task<int> CleanupDoctorUsersFromAppUsers()
+        {
+            try
+            {
+                _logger.LogInformation("Doktor kullanıcılarını AppUsers tablosundan temizleme işlemi başlatılıyor...");
+
+                // Tüm doktorları al
+                var doctors = await _unitOfWork.Doctors.GetAll();
+                if (doctors == null || !doctors.Any())
+                {
+                    _logger.LogInformation("Temizlenecek doktor bulunamadı.");
+                    return 0;
+                }
+
+                // Doktor e-posta adreslerini topla
+                var doctorEmails = doctors.Select(d => d.Email).ToList();
+
+                // AppUsers tablosunda bu e-posta adreslerine sahip kullanıcıları bul
+                var usersToDelete = new List<AppUser>();
+                foreach (var email in doctorEmails)
+                {
+                    if (!string.IsNullOrEmpty(email))
+                    {
+                        var users = await _unitOfWork.AppUsers.Find(u => u.Email == email);
+                        usersToDelete.AddRange(users);
+                    }
+                }
+
+                // DoctorId değeri olan kullanıcıları da bul
+                var usersWithDoctorId = await _unitOfWork.AppUsers.Find(u => u.DoctorId.HasValue && u.DoctorId > 0);
+                usersToDelete.AddRange(usersWithDoctorId);
+
+                // Tekrarlanan kullanıcıları kaldır
+                usersToDelete = usersToDelete.Distinct().ToList();
+
+                if (!usersToDelete.Any())
+                {
+                    _logger.LogInformation("AppUsers tablosunda temizlenecek doktor kullanıcısı bulunamadı.");
+                    return 0;
+                }
+
+                _logger.LogInformation($"AppUsers tablosundan {usersToDelete.Count} doktor kullanıcısı temizlenecek.");
+
+                // Kullanıcıları sil
+                foreach (var user in usersToDelete)
+                {
+                    _unitOfWork.AppUsers.Delete(user);
+                }
+
+                // Değişiklikleri kaydet
+                var result = _unitOfWork.Complete();
+
+                _logger.LogInformation($"Temizleme işlemi tamamlandı. {result} kayıt silindi.");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Doktor kullanıcılarını temizleme sırasında bir hata oluştu.");
+                return -1;
+            }
         }
     }
 }

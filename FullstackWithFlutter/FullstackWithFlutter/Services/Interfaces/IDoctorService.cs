@@ -10,5 +10,6 @@ namespace FullstackWithFlutter.Services.Interfaces
         Task<DoctorViewModel> GetDoctorByEmail(string email);
         Task<bool> UpdateDoctor(int doctorId, SaveDoctorViewModel doctorViewModel);
         Task<bool> DeleteDoctor(int doctorId);
+        Task<int> CleanupDoctorUsersFromAppUsers();
     }
 }

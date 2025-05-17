@@ -287,5 +287,48 @@ namespace FullstackWithFlutter.Controllers
                 return BadRequest(resp);
             }
         }
+
+        [HttpPost("CleanupDoctorUsers")]
+        public async Task<IActionResult> CleanupDoctorUsers()
+        {
+            try
+            {
+                _logger.LogInformation("Doktor kullanıcılarını temizleme işlemi başlatılıyor...");
+
+                var result = await _doctorService.CleanupDoctorUsersFromAppUsers();
+
+                if (result >= 0)
+                {
+                    var resp = new ApiResponse
+                    {
+                        Status = true,
+                        Message = $"Doktor kullanıcıları başarıyla temizlendi. Toplam {result} kayıt silindi.",
+                        Data = new { DeletedCount = result }
+                    };
+                    return Ok(resp);
+                }
+                else
+                {
+                    var resp = new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Doktor kullanıcılarını temizleme sırasında bir hata oluştu.",
+                        Data = null
+                    };
+                    return BadRequest(resp);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Doktor kullanıcılarını temizleme sırasında bir hata oluştu");
+                var resp = new ApiResponse
+                {
+                    Status = false,
+                    Message = "Doktor kullanıcılarını temizleme sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                };
+                return BadRequest(resp);
+            }
+        }
     }
 }

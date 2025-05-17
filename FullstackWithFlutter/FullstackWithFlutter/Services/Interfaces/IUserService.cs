@@ -10,8 +10,11 @@ namespace FullstackWithFlutter.Services.Interfaces
 
         Task<AppUserViewModel> GetUserById(int userId);
 
-        Task<bool> updateUser(int userId, SaveAppUserViewModel userViewModel);
+        Task<bool> UpdateUser(int userId, SaveAppUserViewModel userViewModel);
 
         Task<bool> DeleteUser(int userId);
+
+        // Admin kullanıcısı oluşturma
+        Task<Core.ViewModels.ApiResponse> CreateAdminUser(SaveAppUserViewModel adminViewModel);
     }
 }

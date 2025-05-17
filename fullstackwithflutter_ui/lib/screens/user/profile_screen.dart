@@ -43,56 +43,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      // Önce SharedPreferences'dan kullanıcı bilgilerini al
-      final userData = await _apiService.getUserData();
+      // Mevcut kullanıcı bilgilerini al
+      final currentUser = await _apiService.getCurrentUser();
 
-      if (userData != null) {
+      if (currentUser != null) {
         // Kullanıcı bilgileri varsa, form alanlarını doldur
         setState(() {
-          _fullNameController.text = userData['fullName'] ?? '';
-          _emailController.text = userData['email'] ?? '';
-          _phoneController.text = userData['phoneNumber'] ?? '';
+          _fullNameController.text = currentUser.fullName;
+          _emailController.text = currentUser.email;
+          _phoneController.text = currentUser.phoneNumber;
           _isLoading = false;
         });
       } else {
-        // Kullanıcı bilgileri yoksa, API'den al
-        final result = await _apiService.getCurrentUser();
-
-        if (result['success'] && result['data'] != null) {
-          final data = result['data'];
-
-          // API'den gelen veri yapısına göre bilgileri al
-          String fullName = '';
-          String email = '';
-          String phoneNumber = '';
-
-          if (data is Map) {
-            fullName = data['fullName'] ?? data['name'] ?? '';
-            email = data['email'] ?? '';
-            phoneNumber = data['phoneNumber'] ?? data['phone'] ?? '';
-          }
-
-          // Form alanlarını doldur
-          setState(() {
-            _fullNameController.text = fullName;
-            _emailController.text = email;
-            _phoneController.text = phoneNumber;
-            _isLoading = false;
-          });
-
-          // Kullanıcı bilgilerini kaydet
-          await _apiService.saveUserData({
-            'fullName': fullName,
-            'email': email,
-            'phoneNumber': phoneNumber,
-          });
-        } else {
-          setState(() {
-            _errorMessage =
-                result['message'] ?? 'Kullanıcı bilgileri alınamadı';
-            _isLoading = false;
-          });
-        }
+        // Kullanıcı bilgileri yoksa, hata mesajı göster
+        setState(() {
+          _errorMessage = 'Kullanıcı bilgileri alınamadı';
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {

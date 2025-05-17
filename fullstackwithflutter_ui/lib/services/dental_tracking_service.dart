@@ -216,14 +216,8 @@ class DentalTrackingService {
   // Mevcut kullanıcıyı getir
   Future<User?> getCurrentUser() async {
     try {
-      final result = await _apiService.getCurrentUser();
-
-      // API'den gelen yanıtı kontrol et
-      if (result['success'] == true && result['data'] != null) {
-        // Map'i User nesnesine dönüştür
-        return User.fromJson(result['data']);
-      }
-      return null;
+      // Doğrudan User nesnesi döndüren yeni metodu kullan
+      return await _apiService.getCurrentUser();
     } catch (e) {
       print('Error getting current user: $e');
       return null;

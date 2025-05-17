@@ -62,58 +62,33 @@ class LoginScreenState extends State<LoginScreen> {
           ),
         );
 
-        // Kullanıcı rolünü kontrol et
-        Map<String, dynamic> userData = {};
+        // Mevcut kullanıcı bilgilerini al
+        final currentUser = await _apiService.getCurrentUser();
 
-        // Debug için tüm yanıtı yazdır
-        print('LOGIN - Tüm yanıt: $result');
+        if (currentUser == null) {
+          // Kullanıcı bilgileri alınamadı
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Kullanıcı bilgileri alınamadı';
+          });
 
-        // API yanıt formatını kontrol et - iç içe yapıları kontrol et
-        if (result['data'] != null) {
-          if (result['data'] is Map) {
-            // Yeni API formatı: data -> data -> user
-            if (result['data']['data'] != null &&
-                result['data']['data'] is Map) {
-              if (result['data']['data']['user'] != null &&
-                  result['data']['data']['user'] is Map) {
-                userData =
-                    Map<String, dynamic>.from(result['data']['data']['user']);
-                print('LOGIN - Kullanıcı verisi (data->data->user): $userData');
-              }
-            }
-            // Eski API formatı: data -> user
-            else if (result['data']['user'] != null &&
-                result['data']['user'] is Map) {
-              userData = Map<String, dynamic>.from(result['data']['user']);
-              print('LOGIN - Kullanıcı verisi (data->user): $userData');
-            }
-            // Düz data
-            else {
-              userData = Map<String, dynamic>.from(result['data']);
-              print('LOGIN - Kullanıcı verisi (data): $userData');
-            }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Kullanıcı bilgileri alınamadı, lütfen tekrar deneyin'),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
+          return;
         }
 
-        // Rol bilgisini direkt al
-        String role = 'user'; // Varsayılan rol
-
-        // API'den dönen role doğrudan kontrol et
-        if (userData.containsKey('role') &&
-            userData['role'] != null &&
-            userData['role'].toString().isNotEmpty) {
-          role = userData['role'].toString().toLowerCase();
-          print('LOGIN - API\'den gelen rol: $role');
-        }
-
-        // Sadece API'den gelen role değerine göre işlem yap
-        // Kullanıcı verilerini güncelle
-        await _apiService.saveUserData(userData);
+        // Kullanıcı rolünü kontrol et
+        final role = currentUser.role.toLowerCase();
 
         // Debug için rol bilgisini yazdır
         print('LOGIN - Kullanıcı rolü: $role');
-
-        print('LOGIN - Son belirlenen rol: $role');
 
         // Role göre yönlendirme yap
         if (role == 'doctor') {
@@ -140,6 +115,14 @@ class LoginScreenState extends State<LoginScreen> {
               'LOGIN - Admin rolü tespit edildi, admin_dashboard sayfasına yönlendiriliyor...');
           if (mounted) {
             Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
+
+            // Yönlendirme mesajı göster
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Admin paneline yönlendiriliyor...'),
+                backgroundColor: Colors.purple,
+              ),
+            );
           }
         } else {
           print(
@@ -178,6 +161,179 @@ class LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
+  }
+
+  // İlk admin kullanıcısı oluşturma dialog'u
+  void _showCreateFirstAdminDialog(BuildContext context) {
+    bool isLoading = false;
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController fullNameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('İlk Admin Kullanıcısı Oluştur'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: ListBody(
+                    children: <Widget>[
+                      const Text(
+                        'Bu işlem, sistemdeki ilk admin kullanıcısını oluşturacaktır.',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: fullNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Ad Soyad',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen ad soyad girin';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'E-posta',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen e-posta girin';
+                          }
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(value)) {
+                            return 'Geçerli bir e-posta adresi girin';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: passwordController,
+                        decoration: const InputDecoration(
+                          labelText: 'Şifre',
+                          border: OutlineInputBorder(),
+                        ),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen şifre girin';
+                          }
+                          if (value.length < 6) {
+                            return 'Şifre en az 6 karakter olmalıdır';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 16.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text('İptal'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          // Form doğrulama
+                          if (formKey.currentState!.validate()) {
+                            // Yükleniyor durumunu güncelle
+                            setState(() {
+                              isLoading = true;
+                            });
+
+                            // Admin kullanıcı verilerini hazırla
+                            final adminData = {
+                              'email': emailController.text,
+                              'password': passwordController.text,
+                              'fullName': fullNameController.text,
+                              'role': 'admin',
+                            };
+
+                            try {
+                              // API isteğini yap
+                              final result =
+                                  await _apiService.createFirstAdmin(adminData);
+
+                              // Sonuç mesajını hazırla
+                              final String message =
+                                  result['message'] ?? 'İşlem tamamlandı';
+                              final bool success = result['success'] ?? false;
+
+                              // Dialog'u kapat
+                              if (dialogContext.mounted) {
+                                Navigator.of(dialogContext).pop();
+                              }
+
+                              // Sonucu göster
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(message),
+                                    backgroundColor:
+                                        success ? Colors.green : Colors.red,
+                                    duration:
+                                        Duration(seconds: success ? 5 : 3),
+                                  ),
+                                );
+                              }
+                            } catch (error) {
+                              // Yükleniyor durumunu güncelle
+                              setState(() {
+                                isLoading = false;
+                              });
+
+                              // Hata mesajını göster
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Bir hata oluştu: $error'),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                  child: const Text('Oluştur'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -352,6 +508,20 @@ class LoginScreenState extends State<LoginScreen> {
                         child: const Text('Kayıt Ol'),
                       ),
                     ],
+                  ),
+
+                  // İlk admin kullanıcısı oluşturma butonu (sadece geliştirme aşamasında)
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    onPressed: () {
+                      _showCreateFirstAdminDialog(context);
+                    },
+                    icon: const Icon(Icons.admin_panel_settings, size: 16),
+                    label: const Text('İlk Admin Kullanıcısı Oluştur'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey,
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
                   ),
                 ],
               ),

@@ -171,7 +171,7 @@ namespace FullstackWithFlutter.Controllers
         {
             try
             {
-                var userUpdated = await _userService.updateUser(userId, userViewModel);
+                var userUpdated = await _userService.UpdateUser(userId, userViewModel);
                 if (userUpdated)
                 {
                     var resp = new ApiResponse

@@ -64,15 +64,16 @@ class HomeScreenState extends State<HomeScreen>
   // Mevcut kullanıcı bilgilerini getir
   Future<void> _fetchCurrentUser() async {
     try {
-      final result = await _apiService.getCurrentUser();
+      final currentUser = await _apiService.getCurrentUser();
 
-      if (result['success'] && result['data'] != null) {
+      if (currentUser != null) {
         setState(() {
-          _currentUser = User.fromJson(result['data']);
+          _currentUser = currentUser;
         });
       }
     } catch (e) {
       // Hata durumunda sessizce devam et
+      print('Kullanıcı bilgileri alınırken hata: $e');
     }
   }
 

@@ -369,5 +369,114 @@ namespace FullstackWithFlutter.Controllers
                 });
             }
         }
+
+        // Admin kullanıcısı oluşturma metodu
+        [HttpPost("CreateAdminUser")]
+        [Authorize(Roles = "admin")] // Sadece admin kullanıcıları bu endpoint'i kullanabilir
+        public async Task<IActionResult> CreateAdminUser(SaveAppUserViewModel adminViewModel)
+        {
+            try
+            {
+                _logger.LogInformation("CreateAdminUser endpoint called");
+
+                if (adminViewModel == null || string.IsNullOrEmpty(adminViewModel.Email) || string.IsNullOrEmpty(adminViewModel.Password))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email ve şifre gereklidir!",
+                        Data = null
+                    });
+                }
+
+                // Role bilgisini admin olarak ayarla
+                adminViewModel.Role = "admin";
+
+                // Admin kullanıcısı oluştur
+                var result = await _authService.Register(adminViewModel);
+
+                if (result.Status)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating admin user");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Admin kullanıcısı oluşturulurken bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        // İlk admin kullanıcısı oluşturma metodu (sadece geliştirme aşamasında kullanılacak)
+        [HttpPost("CreateFirstAdmin")]
+        [AllowAnonymous] // Herkes bu endpoint'i kullanabilir (sadece geliştirme aşamasında)
+        public async Task<IActionResult> CreateFirstAdmin(SaveAppUserViewModel adminViewModel)
+        {
+            try
+            {
+                _logger.LogInformation("CreateFirstAdmin endpoint called");
+
+                // Mevcut admin kullanıcısı var mı kontrol et
+                var existingAdmins = await _authService.GetUsersByRole("admin");
+                if (existingAdmins != null && existingAdmins.Count > 0)
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Sistemde zaten admin kullanıcısı bulunmaktadır!",
+                        Data = null
+                    });
+                }
+
+                if (adminViewModel == null || string.IsNullOrEmpty(adminViewModel.Email) || string.IsNullOrEmpty(adminViewModel.Password))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Email ve şifre gereklidir!",
+                        Data = null
+                    });
+                }
+
+                // Role bilgisini admin olarak ayarla
+                adminViewModel.Role = "admin";
+
+                // Admin kullanıcısı oluştur
+                var result = await _authService.Register(adminViewModel);
+
+                if (result.Status)
+                {
+                    return Ok(new ApiResponse
+                    {
+                        Status = true,
+                        Message = "İlk admin kullanıcısı başarıyla oluşturuldu!",
+                        Data = result.Data
+                    });
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating first admin user");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "İlk admin kullanıcısı oluşturulurken bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
     }
 }
