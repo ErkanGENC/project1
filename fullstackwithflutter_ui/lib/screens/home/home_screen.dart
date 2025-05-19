@@ -42,8 +42,7 @@ class HomeScreenState extends State<HomeScreen>
       });
     });
     _fetchUsers();
-    _fetchCurrentUser();
-    _fetchUpcomingAppointments();
+    _fetchCurrentUser(); // Bu metod içinde _fetchUpcomingAppointments() çağrılıyor
   }
 
   @override
@@ -61,6 +60,9 @@ class HomeScreenState extends State<HomeScreen>
         setState(() {
           _currentUser = currentUser;
         });
+
+        // Kullanıcı bilgileri alındıktan sonra randevuları getir
+        _fetchUpcomingAppointments();
       }
     } catch (e) {
       // Hata durumunda sessizce devam et
@@ -70,7 +72,15 @@ class HomeScreenState extends State<HomeScreen>
   // Yaklaşan randevuları getir
   Future<void> _fetchUpcomingAppointments() async {
     try {
-      final appointments = await _apiService.getAllAppointments();
+      List<Appointment> appointments = [];
+
+      // Eğer giriş yapmış bir kullanıcı varsa, sadece o kullanıcının randevularını getir
+      if (_currentUser != null) {
+        appointments = await _apiService.getUserAppointments(_currentUser!.id);
+      } else {
+        // Kullanıcı yoksa boş liste kullan
+        appointments = [];
+      }
 
       // Bugün ve sonrası için olan randevuları filtrele
       final now = DateTime.now();
@@ -90,6 +100,9 @@ class HomeScreenState extends State<HomeScreen>
       });
     } catch (e) {
       // Hata durumunda sessizce devam et
+      setState(() {
+        _upcomingAppointments = [];
+      });
     }
   }
 
@@ -218,8 +231,7 @@ class HomeScreenState extends State<HomeScreen>
                       setState(() {
                         _isLoading = true;
                       });
-                      _fetchCurrentUser();
-                      _fetchUpcomingAppointments();
+                      _fetchCurrentUser(); // Bu metod içinde _fetchUpcomingAppointments() çağrılıyor
                       setState(() {
                         _isLoading = false;
                       });
@@ -256,8 +268,7 @@ class HomeScreenState extends State<HomeScreen>
                 _errorMessage = '';
               });
               _fetchUsers();
-              _fetchCurrentUser();
-              _fetchUpcomingAppointments();
+              _fetchCurrentUser(); // Bu metod içinde _fetchUpcomingAppointments() çağrılıyor
             },
           ),
         ],
@@ -284,8 +295,7 @@ class HomeScreenState extends State<HomeScreen>
                       setState(() {
                         _isLoading = true;
                       });
-                      _fetchCurrentUser();
-                      _fetchUpcomingAppointments();
+                      _fetchCurrentUser(); // Bu metod içinde _fetchUpcomingAppointments() çağrılıyor
                       setState(() {
                         _isLoading = false;
                       });

@@ -2403,6 +2403,61 @@ class ApiService {
     }
   }
 
+  // Kullanıcıya özel randevuları getir
+  Future<List<Appointment>> getUserAppointments(int patientId) async {
+    try {
+      // Debug için istek bilgilerini yazdır
+      print('Kullanıcı randevuları isteniyor: patientId=$patientId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/Appointments/patient/$patientId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      // Debug için yanıtı yazdır
+      print('Kullanıcı randevuları yanıtı: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API'den gelen veri bir liste ise
+        if (decodedData is List) {
+          return decodedData.map((json) => Appointment.fromJson(json)).toList();
+        }
+        // API'den gelen veri bir nesne ise ve 'data' alanı içeriyorsa
+        else if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+
+          // data bir liste ise
+          if (data is List) {
+            return data.map((json) => Appointment.fromJson(json)).toList();
+          }
+          // data bir nesne ise ve 'items' veya benzer bir alanı varsa
+          else if (data is Map && data.containsKey('items')) {
+            final List<dynamic> items = data['items'];
+            return items.map((json) => Appointment.fromJson(json)).toList();
+          }
+          // Diğer durumlar için boş liste dön
+          else {
+            return [];
+          }
+        }
+        // Diğer durumlar için boş liste dön
+        else {
+          return [];
+        }
+      } else {
+        print('Kullanıcı randevuları alınırken hata: ${response.body}');
+        throw Exception('Hata: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Kullanıcı randevuları alınırken hata: $e');
+
+      // API bağlantısı olmadığı durumda boş liste dön
+      return [];
+    }
+  }
+
   // Yeni randevu ekle
   Future<Map<String, dynamic>> addAppointment(Appointment appointment) async {
     try {

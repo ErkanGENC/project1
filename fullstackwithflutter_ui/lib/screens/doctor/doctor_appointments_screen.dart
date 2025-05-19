@@ -292,7 +292,7 @@ class DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             title: const Text('Ayarlar'),
             onTap: () {
               Navigator.pop(context);
-              // Ayarlar sayfasına git
+              Navigator.pushNamed(context, AppRoutes.doctorSettings);
             },
           ),
           const Divider(),

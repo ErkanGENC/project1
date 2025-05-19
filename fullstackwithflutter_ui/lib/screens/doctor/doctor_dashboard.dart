@@ -198,13 +198,6 @@ class DoctorDashboardState extends State<DoctorDashboard> {
         title: Text('Dr. ${_currentDoctor?.fullName ?? 'Doktor'} Paneli'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.home),
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, AppRoutes.home);
-            },
-            tooltip: 'Kullanıcı Paneli',
-          ),
-          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadDoctorData,
           ),
@@ -294,7 +287,7 @@ class DoctorDashboardState extends State<DoctorDashboard> {
             title: const Text('Ayarlar'),
             onTap: () {
               Navigator.pop(context);
-              // Ayarlar sayfasına git
+              Navigator.pushNamed(context, AppRoutes.doctorSettings);
             },
           ),
           const Divider(),

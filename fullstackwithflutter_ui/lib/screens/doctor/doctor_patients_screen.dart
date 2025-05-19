@@ -3,6 +3,7 @@ import '../../constants/app_theme.dart';
 import '../../models/user_model.dart';
 import '../../models/appointment_model.dart';
 import '../../services/api_service.dart';
+import '../../routes/app_routes.dart';
 
 class DoctorPatientsScreen extends StatefulWidget {
   const DoctorPatientsScreen({super.key});
@@ -20,6 +21,7 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   List<Appointment> _appointments = [];
   User? _currentDoctor;
   final TextEditingController _searchController = TextEditingController();
+  String _filterStatus = 'Tümü'; // Randevu durumuna göre filtreleme
 
   @override
   void initState() {
@@ -136,6 +138,33 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
 
       _filteredPatients = List.from(_allPatients);
 
+      // Hastaları randevu tarihine göre sırala
+      _filteredPatients.sort((a, b) {
+        // a hastasının en son randevusu
+        final aAppointments = _appointments
+            .where((appointment) => appointment.patientEmail == a.email)
+            .toList();
+        final bAppointments = _appointments
+            .where((appointment) => appointment.patientEmail == b.email)
+            .toList();
+
+        if (aAppointments.isEmpty) {
+          return 1; // a'nın randevusu yoksa sonda olsun
+        }
+        if (bAppointments.isEmpty) {
+          return -1; // b'nin randevusu yoksa sonda olsun
+        }
+
+        // En son randevuları bul
+        final lastAppointmentA = aAppointments
+            .reduce((curr, next) => curr.date.isAfter(next.date) ? curr : next);
+        final lastAppointmentB = bAppointments
+            .reduce((curr, next) => curr.date.isAfter(next.date) ? curr : next);
+
+        // Tarihleri karşılaştır (en yeni önce)
+        return lastAppointmentB.date.compareTo(lastAppointmentA.date);
+      });
+
       setState(() {
         _isLoading = false;
       });
@@ -150,17 +179,73 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   void _filterPatients() {
     final query = _searchController.text.toLowerCase();
 
+    // Önce arama sorgusuna göre filtrele
+    List<User> filteredBySearch;
+    if (query.isEmpty) {
+      filteredBySearch = List.from(_allPatients);
+    } else {
+      filteredBySearch = _allPatients
+          .where((patient) =>
+              patient.fullName.toLowerCase().contains(query) ||
+              patient.email.toLowerCase().contains(query) ||
+              patient.phoneNumber.toLowerCase().contains(query))
+          .toList();
+    }
+
+    // Sonra randevu durumuna göre filtrele
     setState(() {
-      if (query.isEmpty) {
-        _filteredPatients = List.from(_allPatients);
+      if (_filterStatus == 'Tümü') {
+        _filteredPatients = filteredBySearch;
       } else {
-        _filteredPatients = _allPatients
-            .where((patient) =>
-                patient.fullName.toLowerCase().contains(query) ||
-                patient.email.toLowerCase().contains(query) ||
-                patient.phoneNumber.toLowerCase().contains(query))
-            .toList();
+        _filteredPatients = filteredBySearch.where((patient) {
+          // Hastanın randevularını bul
+          final patientAppointments = _appointments
+              .where((appointment) => appointment.patientEmail == patient.email)
+              .toList();
+
+          // Duruma göre filtrele
+          switch (_filterStatus) {
+            case 'Tamamlanan Tedaviler':
+              // En az bir tamamlanmış randevusu olan hastalar
+              return patientAppointments.any((appointment) =>
+                  appointment.status.toLowerCase() == 'tamamlandı');
+            case 'Devam Eden Tedaviler':
+              // Bekleyen veya onaylanmış randevusu olan hastalar
+              return patientAppointments.any((appointment) =>
+                  appointment.status.toLowerCase() == 'bekleyen' ||
+                  appointment.status.toLowerCase() == 'onaylandı');
+            default:
+              return true;
+          }
+        }).toList();
       }
+
+      // Randevu tarihine göre sırala (en yeni randevusu olan hastalar önce)
+      _filteredPatients.sort((a, b) {
+        // a hastasının en son randevusu
+        final aAppointments = _appointments
+            .where((appointment) => appointment.patientEmail == a.email)
+            .toList();
+        final bAppointments = _appointments
+            .where((appointment) => appointment.patientEmail == b.email)
+            .toList();
+
+        if (aAppointments.isEmpty) {
+          return 1; // a'nın randevusu yoksa sonda olsun
+        }
+        if (bAppointments.isEmpty) {
+          return -1; // b'nin randevusu yoksa sonda olsun
+        }
+
+        // En son randevuları bul
+        final lastAppointmentA = aAppointments
+            .reduce((curr, next) => curr.date.isAfter(next.date) ? curr : next);
+        final lastAppointmentB = bAppointments
+            .reduce((curr, next) => curr.date.isAfter(next.date) ? curr : next);
+
+        // Tarihleri karşılaştır (en yeni önce)
+        return lastAppointmentB.date.compareTo(lastAppointmentA.date);
+      });
     });
   }
 
@@ -176,6 +261,7 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
           ),
         ],
       ),
+      drawer: _buildDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage.isNotEmpty
@@ -187,20 +273,60 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                 )
               : Column(
                   children: [
-                    // Arama alanı
+                    // Arama ve filtreleme alanı
                     Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Hasta ara...',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      child: Column(
+                        children: [
+                          // Arama alanı
+                          TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Hasta ara...',
+                              prefixIcon: const Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 0),
+                            ),
                           ),
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 0),
-                        ),
+
+                          const SizedBox(height: 16),
+
+                          // Filtreleme seçenekleri
+                          Row(
+                            children: [
+                              const Text('Filtrele: ',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  value: _filterStatus,
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 'Tümü',
+                                        child: Text('Tüm Hastalar')),
+                                    DropdownMenuItem(
+                                        value: 'Tamamlanan Tedaviler',
+                                        child: Text('Tamamlanan Tedaviler')),
+                                    DropdownMenuItem(
+                                        value: 'Devam Eden Tedaviler',
+                                        child: Text('Devam Eden Tedaviler')),
+                                  ],
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _filterStatus = value!;
+                                      _filterPatients();
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
 
@@ -208,11 +334,20 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             'Toplam ${_filteredPatients.length} hasta',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const Text(
+                            'Randevu tarihine göre sıralandı',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              fontSize: 12,
                               color: Colors.grey,
                             ),
                           ),
@@ -444,6 +579,97 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Kapat'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: const BoxDecoration(
+              color: AppTheme.primaryColor,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.person,
+                    size: 40,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Dr. ${_currentDoctor?.fullName ?? 'Doktor'}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _currentDoctor?.specialization ?? 'Uzman',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.dashboard),
+            title: const Text('Dashboard'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushReplacementNamed(
+                  context, AppRoutes.doctorDashboard);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Randevularım'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.doctorAppointments);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.people),
+            title: const Text('Hastalarım'),
+            selected: true,
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Ayarlar'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.doctorSettings);
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Çıkış Yap', style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              // Çıkış işlemi
+              await _apiService.logout();
+              if (!mounted) return;
+              Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+            },
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

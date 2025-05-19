@@ -282,6 +282,41 @@ namespace FullstackWithFlutter.Controllers
                 });
             }
         }
+
+        [HttpGet("patient/{patientId}")]
+        public async Task<IActionResult> GetAppointmentsByPatientId(int patientId)
+        {
+            try
+            {
+                _logger.LogInformation("GetAppointmentsByPatientId called with patientId: {PatientId}", patientId);
+
+                var appointmentList = await _appointmentService.GetAppointmentsByPatientId(patientId);
+
+                _logger.LogInformation("Found {Count} appointments for patient ID: {PatientId}",
+                    appointmentList.Count, patientId);
+
+                var resp = new ApiResponse
+                {
+                    Status = true,
+                    Message = appointmentList.Any()
+                        ? "Patient appointments fetched successfully"
+                        : "No appointments found for this patient",
+                    Data = appointmentList,
+                };
+                return Ok(resp);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching appointments for patient ID {PatientId}", patientId);
+                var resp = new ApiResponse
+                {
+                    Status = false,
+                    Message = "Error fetching patient appointments: " + ex.Message,
+                    Data = null,
+                };
+                return BadRequest(resp);
+            }
+        }
     }
 }
 

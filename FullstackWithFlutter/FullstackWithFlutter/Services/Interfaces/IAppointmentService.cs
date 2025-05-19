@@ -10,5 +10,6 @@ namespace FullstackWithFlutter.Services.Interfaces
         Task<bool> UpdateAppointment(int appointmentId, SaveAppointmentViewModel appointmentViewModel);
         Task<bool> DeleteAppointment(int appointmentId);
         Task<bool> UpdateStatus(int appointmentId, string newStatus);
+        Task<List<AppointmentViewModel>> GetAppointmentsByPatientId(int patientId);
     }
 }

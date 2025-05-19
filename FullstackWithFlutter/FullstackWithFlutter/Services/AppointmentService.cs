@@ -164,5 +164,40 @@ namespace FullstackWithFlutter.Services
                 return false;
             }
         }
+
+        public async Task<List<AppointmentViewModel>> GetAppointmentsByPatientId(int patientId)
+        {
+            try
+            {
+                if (patientId <= 0)
+                {
+                    _logger.LogWarning("Invalid patient ID: {PatientId}", patientId);
+                    return new List<AppointmentViewModel>();
+                }
+
+                // Tüm randevuları al
+                var allAppointments = await _unitOfWork.Appointments.GetAll();
+                if (allAppointments == null)
+                {
+                    return new List<AppointmentViewModel>();
+                }
+
+                // Hastaya ait randevuları filtrele
+                var patientAppointments = allAppointments.Where(a => a.PatientId == patientId).ToList();
+
+                // ViewModel'e dönüştür
+                var appointmentViewModels = _mapper.Map<List<AppointmentViewModel>>(patientAppointments);
+
+                _logger.LogInformation("Retrieved {Count} appointments for patient ID: {PatientId}",
+                    appointmentViewModels.Count, patientId);
+
+                return appointmentViewModels;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting appointments for patient ID: {PatientId}", patientId);
+                return new List<AppointmentViewModel>();
+            }
+        }
     }
 }
