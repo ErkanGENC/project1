@@ -3,6 +3,7 @@ import '../../constants/app_theme.dart';
 import '../../models/dental_tracking_model.dart';
 import '../../models/user_model.dart';
 import '../../services/dental_tracking_service.dart';
+import '../../services/api_service.dart';
 
 /// Ağız ve diş sağlığı takip ekranı
 class DentalHealthScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final DentalTrackingService _trackingService = DentalTrackingService();
+  final ApiService _apiService = ApiService();
 
   // Kullanıcı bilgisi
   User? _currentUser;
@@ -56,7 +58,7 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _notesController = TextEditingController(text: _notes);
-    _loadUserData();
+    _checkAccessAndLoadData();
   }
 
   @override
@@ -66,8 +68,8 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
     super.dispose();
   }
 
-  // Kullanıcı verilerini yükle
-  Future<void> _loadUserData() async {
+  // Erişim kontrolü ve veri yükleme
+  Future<void> _checkAccessAndLoadData() async {
     try {
       setState(() {
         _isLoading = true;
@@ -86,16 +88,58 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
         return;
       }
 
-      // Debug için kullanıcı bilgilerini yazdır
-      print('Loaded user: ID=${user.id}, Name=${user.fullName}');
+      // Kullanıcının onaylanmış randevusu olup olmadığını kontrol et
+      final hasApprovedAppointment =
+          await _apiService.hasApprovedAppointment(user.id);
 
-      // Kullanıcı bilgilerini kaydet
+      if (!hasApprovedAppointment) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Bu sayfaya erişim için onaylanmış bir doktor randevunuz olmalıdır. '
+              'Lütfen önce bir randevu oluşturun ve doktorunuzun onaylamasını bekleyin.';
+        });
+        return;
+      }
+
+      // Kullanıcının erişim izni var, verileri yükle
       _currentUser = user;
+      _loadUserData();
+    } catch (e) {
+      print('Error in _checkAccessAndLoadData: $e');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erişim kontrolü sırasında bir hata oluştu: $e';
+      });
+    }
+  }
+
+  // Kullanıcı verilerini yükle
+  Future<void> _loadUserData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
+      // Mevcut kullanıcı zaten yüklendi, tekrar yüklemeye gerek yok
+      if (_currentUser == null) {
+        final user = await _trackingService.getCurrentUser();
+        if (user == null) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage =
+                'Kullanıcı bilgileri alınamadı. Lütfen tekrar giriş yapın.';
+          });
+          return;
+        }
+        _currentUser = user;
+      }
 
       // Bugünkü kaydı al
-      final todaysRecord = await _trackingService.getTodaysRecord(user.id);
+      final todaysRecord =
+          await _trackingService.getTodaysRecord(_currentUser!.id);
       if (todaysRecord != null) {
-        print('Today\'s record loaded successfully');
         setState(() {
           _morningBrushing = todaysRecord.morningBrushing;
           _eveningBrushing = todaysRecord.eveningBrushing;
@@ -105,20 +149,11 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
           _notes = todaysRecord.notes ?? '';
           _notesController.text = _notes;
         });
-
-        // Debug için yüklenen verileri yazdır
-        print('Loaded dental tracking data:');
-        print('- Morning Brushing: $_morningBrushing');
-        print('- Evening Brushing: $_eveningBrushing');
-        print('- Used Floss: $_usedFloss');
-        print('- Used Mouthwash: $_usedMouthwash');
-      } else {
-        print('No record found for today');
       }
 
       // Haftalık istatistikleri al
-      final weeklyStats = await _trackingService.getWeeklyStats(user.id);
-      print('Weekly stats loaded: ${weeklyStats.dailyRecords.length} records');
+      final weeklyStats =
+          await _trackingService.getWeeklyStats(_currentUser!.id);
 
       setState(() {
         _weeklyBrushing = weeklyStats.weeklyBrushing;
@@ -127,7 +162,6 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading user data: $e');
       setState(() {
         _isLoading = false;
         _errorMessage = 'Veriler yüklenirken bir hata oluştu: $e';
@@ -149,10 +183,6 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
     }
 
     try {
-      // Debug için kullanıcı bilgilerini yazdır
-      print(
-          'Current user: ID=${_currentUser!.id}, Name=${_currentUser!.fullName}');
-
       // Bugünün tarihini al
       final today = DateTime.now();
       final todayDate = DateTime(today.year, today.month, today.day);
@@ -166,14 +196,6 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
         usedMouthwash: _usedMouthwash,
         notes: _notes.isNotEmpty ? _notes : null,
       );
-
-      // Debug için kaydedilecek verileri yazdır
-      print('Saving dental tracking data:');
-      print('- Date: $todayDate');
-      print('- Morning Brushing: $_morningBrushing');
-      print('- Evening Brushing: $_eveningBrushing');
-      print('- Used Floss: $_usedFloss');
-      print('- Used Mouthwash: $_usedMouthwash');
 
       // Kaydı kaydet
       final success = await _trackingService.saveRecord(record);
@@ -216,8 +238,6 @@ class _DentalHealthScreenState extends State<DentalHealthScreen>
         );
       }
     } catch (e) {
-      print('Error in _saveRecord: $e');
-
       // Widget hala monte edilmiş mi kontrol et
       if (!mounted) return;
 

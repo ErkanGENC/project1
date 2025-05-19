@@ -199,5 +199,42 @@ namespace FullstackWithFlutter.Services
                 return new List<AppointmentViewModel>();
             }
         }
+
+        public async Task<bool> HasApprovedAppointment(int patientId)
+        {
+            try
+            {
+                if (patientId <= 0)
+                {
+                    _logger.LogWarning("Invalid patient ID for HasApprovedAppointment: {PatientId}", patientId);
+                    return false;
+                }
+
+                // Tüm randevuları al
+                var allAppointments = await _unitOfWork.Appointments.GetAll();
+                if (allAppointments == null || !allAppointments.Any())
+                {
+                    return false;
+                }
+
+                // Hastaya ait onaylanmış randevuları filtrele
+                var approvedAppointments = allAppointments
+                    .Where(a => a.PatientId == patientId && a.Status != null && a.Status.ToLower() == "onaylandı")
+                    .ToList();
+
+                // Onaylanmış randevu varsa true döndür
+                bool hasApproved = approvedAppointments.Any();
+
+                _logger.LogInformation("Patient ID: {PatientId} has approved appointment: {HasApproved}",
+                    patientId, hasApproved);
+
+                return hasApproved;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking approved appointments for patient ID: {PatientId}", patientId);
+                return false;
+            }
+        }
     }
 }

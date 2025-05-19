@@ -221,24 +221,86 @@ class HomeScreenState extends State<HomeScreen>
           ListTile(
             leading: const Icon(Icons.medical_services),
             title: const Text('Diş Sağlığı'),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DentalHealthScreen(
-                    onRefresh: () {
-                      setState(() {
-                        _isLoading = true;
-                      });
-                      _fetchCurrentUser(); // Bu metod içinde _fetchUpcomingAppointments() çağrılıyor
-                      setState(() {
-                        _isLoading = false;
-                      });
-                    },
+
+              if (_currentUser != null) {
+                // Yükleniyor göstergesi
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext dialogContext) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
+                );
+
+                try {
+                  // Kullanıcının onaylanmış randevusu olup olmadığını kontrol et
+                  final hasApprovedAppointment = await _apiService
+                      .hasApprovedAppointment(_currentUser!.id);
+
+                  // Yükleniyor göstergesini kapat
+                  if (!mounted) return;
+                  Navigator.of(context, rootNavigator: true).pop();
+
+                  if (!hasApprovedAppointment) {
+                    // Onaylanmış randevu yoksa uyarı göster
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Bu sayfaya erişim için onaylanmış bir doktor randevunuz olmalıdır. '
+                            'Lütfen önce bir randevu oluşturun ve doktorunuzun onaylamasını bekleyin.'),
+                        backgroundColor: Colors.orange,
+                        duration: Duration(seconds: 5),
+                      ),
+                    );
+                    return;
+                  }
+
+                  // Onaylanmış randevu varsa sayfaya yönlendir
+                  if (!mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DentalHealthScreen(
+                        onRefresh: () {
+                          setState(() {
+                            _isLoading = true;
+                          });
+                          _fetchCurrentUser(); // Bu metod içinde _fetchUpcomingAppointments() çağrılıyor
+                          setState(() {
+                            _isLoading = false;
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  // Yükleniyor göstergesini kapat
+                  if (!mounted) return;
+                  Navigator.of(context, rootNavigator: true).pop();
+
+                  // Hata mesajı göster
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Bir hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } else {
+                // Kullanıcı bilgisi yoksa uyarı göster
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        'Kullanıcı bilgileriniz yüklenemedi. Lütfen tekrar giriş yapın.'),
+                    backgroundColor: Colors.red,
                   ),
-                ),
-              );
+                );
+              }
             },
           ),
           ListTile(

@@ -317,6 +317,41 @@ namespace FullstackWithFlutter.Controllers
                 return BadRequest(resp);
             }
         }
+
+        [HttpGet("hasApprovedAppointment/{patientId}")]
+        public async Task<IActionResult> HasApprovedAppointment(int patientId)
+        {
+            try
+            {
+                _logger.LogInformation("HasApprovedAppointment called with patientId: {PatientId}", patientId);
+
+                var hasApproved = await _appointmentService.HasApprovedAppointment(patientId);
+
+                _logger.LogInformation("Patient ID: {PatientId} has approved appointment: {HasApproved}",
+                    patientId, hasApproved);
+
+                var resp = new ApiResponse
+                {
+                    Status = true,
+                    Message = hasApproved
+                        ? "Patient has approved appointment"
+                        : "Patient does not have any approved appointment",
+                    Data = hasApproved,
+                };
+                return Ok(resp);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking approved appointments for patient ID {PatientId}", patientId);
+                var resp = new ApiResponse
+                {
+                    Status = false,
+                    Message = "Error checking approved appointments: " + ex.Message,
+                    Data = false,
+                };
+                return BadRequest(resp);
+            }
+        }
     }
 }
 

@@ -122,7 +122,83 @@ class UserDashboard extends StatelessWidget {
                 'Diş Sağlığı Takibi',
                 Icons.medical_services,
                 AppTheme.primaryColor,
-                () => Navigator.pushNamed(context, AppRoutes.dentalHealth),
+                () async {
+                  if (currentUser != null) {
+                    // Yükleniyor göstergesi
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext dialogContext) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      },
+                    );
+
+                    // BuildContext'i saklayalım
+                    final currentContext = context;
+
+                    try {
+                      // Kullanıcının onaylanmış randevusu olup olmadığını kontrol et
+                      final apiService = ApiService();
+                      final hasApprovedAppointment = await apiService
+                          .hasApprovedAppointment(currentUser!.id);
+
+                      // Yükleniyor göstergesini kapat
+                      if (currentContext.mounted) {
+                        Navigator.of(currentContext, rootNavigator: true).pop();
+                      } else {
+                        return;
+                      }
+
+                      if (!hasApprovedAppointment) {
+                        // Onaylanmış randevu yoksa uyarı göster
+                        if (currentContext.mounted) {
+                          ScaffoldMessenger.of(currentContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Bu sayfaya erişim için onaylanmış bir doktor randevunuz olmalıdır. '
+                                  'Lütfen önce bir randevu oluşturun ve doktorunuzun onaylamasını bekleyin.'),
+                              backgroundColor: Colors.orange,
+                              duration: Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+
+                      // Onaylanmış randevu varsa sayfaya yönlendir
+                      if (currentContext.mounted) {
+                        Navigator.pushNamed(
+                            currentContext, AppRoutes.dentalHealth);
+                      }
+                    } catch (e) {
+                      // Yükleniyor göstergesini kapat
+                      if (currentContext.mounted) {
+                        Navigator.of(currentContext, rootNavigator: true).pop();
+                      }
+
+                      // Hata mesajı göster
+                      if (currentContext.mounted) {
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
+                          SnackBar(
+                            content: Text('Bir hata oluştu: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    // Kullanıcı bilgisi yoksa uyarı göster
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Kullanıcı bilgileriniz yüklenemedi. Lütfen tekrar giriş yapın.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
               ),
             ),
             const SizedBox(width: 12),

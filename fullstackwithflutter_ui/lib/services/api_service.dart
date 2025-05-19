@@ -2458,6 +2458,49 @@ class ApiService {
     }
   }
 
+  // Kullanıcının onaylanmış randevusu olup olmadığını kontrol et
+  Future<bool> hasApprovedAppointment(int patientId) async {
+    try {
+      // Debug için istek bilgilerini yazdır
+      print('Onaylanmış randevu kontrolü: patientId=$patientId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/Appointments/hasApprovedAppointment/$patientId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      // Debug için yanıtı yazdır
+      print('Onaylanmış randevu kontrolü yanıtı: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API'den gelen veri bir nesne ise ve 'data' alanı içeriyorsa
+        if (decodedData is Map && decodedData.containsKey('data')) {
+          // data bir boolean ise
+          if (decodedData['data'] is bool) {
+            return decodedData['data'] as bool;
+          }
+          // data bir string ise
+          else if (decodedData['data'] is String) {
+            return (decodedData['data'] as String).toLowerCase() == 'true';
+          }
+        }
+
+        // Varsayılan olarak false dön
+        return false;
+      } else {
+        print('Onaylanmış randevu kontrolü sırasında hata: ${response.body}');
+        // Hata durumunda false dön
+        return false;
+      }
+    } catch (e) {
+      print('Onaylanmış randevu kontrolü sırasında hata: $e');
+      // Hata durumunda false dön
+      return false;
+    }
+  }
+
   // Yeni randevu ekle
   Future<Map<String, dynamic>> addAppointment(Appointment appointment) async {
     try {
