@@ -10,10 +10,5 @@
 
         // Kullanıcı rolü: user, doctor, admin
         public string? Role { get; set; }
-
-        // Doktor bilgileri
-        public int? DoctorId { get; set; }
-        public string? DoctorName { get; set; }
-        public string? Specialization { get; set; }
     }
 }

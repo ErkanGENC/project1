@@ -54,18 +54,37 @@ class HomeScreenState extends State<HomeScreen>
   // Mevcut kullanıcı bilgilerini getir
   Future<void> _fetchCurrentUser() async {
     try {
+      // Önce mevcut kullanıcı bilgilerini al
       final currentUser = await _apiService.getCurrentUser();
 
       if (currentUser != null) {
+        // Kullanıcı bilgilerini güncelle
         setState(() {
           _currentUser = currentUser;
         });
 
         // Kullanıcı bilgileri alındıktan sonra randevuları getir
-        _fetchUpcomingAppointments();
+        await _fetchUpcomingAppointments();
+
+        // Kullanıcının onaylanmış randevusu varsa, doktor bilgilerini yeniden kontrol et
+        // Bu, randevu onaylandığında doktor bilgilerinin otomatik olarak güncellendiğinden emin olmak için
+        if (_upcomingAppointments.any((appointment) =>
+            appointment.status.toLowerCase() == "onaylandı" &&
+            appointment.doctorId != null &&
+            appointment.doctorId! > 0)) {
+          // Kullanıcı bilgilerini yeniden al (doktor bilgileri güncellenmiş olabilir)
+          final refreshedUser = await _apiService.refreshUser();
+
+          if (refreshedUser != null && mounted) {
+            setState(() {
+              _currentUser = refreshedUser;
+            });
+          }
+        }
       }
     } catch (e) {
       // Hata durumunda sessizce devam et
+      // Hata mesajını loglama
     }
   }
 

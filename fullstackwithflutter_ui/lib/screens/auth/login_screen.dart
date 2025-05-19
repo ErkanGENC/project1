@@ -91,9 +91,8 @@ class LoginScreenState extends State<LoginScreen> {
         final doctorId = currentUser.doctorId;
 
         // Doktor kullanıcısı olup olmadığını kontrol et
-        // Doktor olması için hem role'ün "doctor" olması hem de doctorId'nin 0'dan büyük olması gerekir
-        final isDoctorUser =
-            role == 'doctor' && doctorId != null && doctorId > 0;
+        // Doktor olması için sadece role'ün "doctor" olması yeterli
+        final isDoctorUser = role == 'doctor';
 
         // Admin kullanıcısı olup olmadığını kontrol et
         final isAdminUser = role == 'admin';

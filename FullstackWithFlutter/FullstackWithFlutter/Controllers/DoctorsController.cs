@@ -330,5 +330,48 @@ namespace FullstackWithFlutter.Controllers
                 return BadRequest(resp);
             }
         }
+
+        [HttpPost("UpdateDoctorRoles")]
+        public async Task<IActionResult> UpdateDoctorRoles()
+        {
+            try
+            {
+                _logger.LogInformation("Doktor rollerini güncelleme işlemi başlatılıyor...");
+
+                var result = await _doctorService.UpdateAllDoctorRoles();
+
+                if (result >= 0)
+                {
+                    var resp = new ApiResponse
+                    {
+                        Status = true,
+                        Message = $"Doktor rolleri başarıyla güncellendi. Toplam {result} kayıt güncellendi.",
+                        Data = new { UpdatedCount = result }
+                    };
+                    return Ok(resp);
+                }
+                else
+                {
+                    var resp = new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Doktor rollerini güncelleme sırasında bir hata oluştu.",
+                        Data = null
+                    };
+                    return BadRequest(resp);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Doktor rollerini güncelleme sırasında bir hata oluştu");
+                var resp = new ApiResponse
+                {
+                    Status = false,
+                    Message = "Doktor rollerini güncelleme sırasında bir hata oluştu: " + ex.Message,
+                    Data = null
+                };
+                return BadRequest(resp);
+            }
+        }
     }
 }

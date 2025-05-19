@@ -37,6 +37,9 @@ namespace FullstackWithFlutter.Services
                     newDoctor.Password = HashPassword("Doctor123");
                 }
 
+                // Doktor rolünü ayarla
+                newDoctor.Role = "doctor";
+
                 newDoctor.CreatedDate = DateTime.Now;
                 newDoctor.CreatedBy = "API";
                 await _unitOfWork.Doctors.Add(newDoctor);
@@ -45,18 +48,11 @@ namespace FullstackWithFlutter.Services
                 // Doktor başarıyla oluşturuldu
                 if (result > 0)
                 {
-                    // Eğer AppUsers tablosunda aynı e-posta adresine sahip bir kullanıcı varsa,
-                    // bu kullanıcıyı AppUsers tablosundan silelim
-                    var existingUsers = await _unitOfWork.AppUsers.Find(u => u.Email == doctorViewModel.Email);
-                    var existingUser = existingUsers.FirstOrDefault();
+                    // NOT: Doktor kullanıcıları sadece Doctors tablosunda tutulmalı,
+                    // AppUsers tablosundan silme işlemi kaldırıldı.
+                    // Böylece doktor kullanıcıları doğru şekilde tanımlanabilir.
 
-                    if (existingUser != null)
-                    {
-                        // Kullanıcıyı AppUsers tablosundan sil
-                        _unitOfWork.AppUsers.Delete(existingUser);
-                        _unitOfWork.Complete();
-                    }
-
+                    _logger.LogInformation($"Doktor başarıyla oluşturuldu: {doctorViewModel.Name}, ID: {newDoctor.Id}");
                     return true;
                 }
 
@@ -85,8 +81,8 @@ namespace FullstackWithFlutter.Services
                 var doctor = await _unitOfWork.Doctors.Get(doctorId);
                 if (doctor != null)
                 {
-                    // Önce AppUser tablosundaki ilişkili kaydı bul
-                    var existingUsers = await _unitOfWork.AppUsers.Find(u => u.DoctorId == doctorId || u.Email == doctor.Email);
+                    // Önce AppUser tablosundaki ilişkili kaydı bul (sadece email ile)
+                    var existingUsers = await _unitOfWork.AppUsers.Find(u => u.Email == doctor.Email);
 
                     // Tüm ilişkili kullanıcıları sil
                     foreach (var existingUser in existingUsers)
@@ -170,6 +166,13 @@ namespace FullstackWithFlutter.Services
                     doctor.Email = doctorViewModel.Email;
                     doctor.PhoneNumber = doctorViewModel.PhoneNumber;
                     doctor.IsAvailable = doctorViewModel.IsAvailable;
+
+                    // Doktor rolünü kontrol et ve ayarla
+                    if (string.IsNullOrEmpty(doctor.Role))
+                    {
+                        doctor.Role = "doctor";
+                    }
+
                     doctor.UpdatedDate = DateTime.Now;
                     doctor.UpdatedBy = "API";
                     _unitOfWork.Doctors.Update(doctor);
@@ -178,8 +181,8 @@ namespace FullstackWithFlutter.Services
                     if (result > 0)
                     {
                         // Doktor başarıyla güncellendi
-                        // Eğer AppUsers tablosunda bu doktora ait bir kullanıcı varsa, silelim
-                        var existingUsers = await _unitOfWork.AppUsers.Find(u => u.Email == doctor.Email || u.DoctorId == doctorId);
+                        // Eğer AppUsers tablosunda bu doktora ait bir kullanıcı varsa, silelim (sadece email ile)
+                        var existingUsers = await _unitOfWork.AppUsers.Find(u => u.Email == doctor.Email);
 
                         foreach (var existingUser in existingUsers)
                         {
@@ -206,6 +209,53 @@ namespace FullstackWithFlutter.Services
         /// Bu metod, doktor kullanıcılarının sadece doctors tablosunda tutulmasını sağlar.
         /// </summary>
         /// <returns>Temizlenen kullanıcı sayısı</returns>
+        // Tüm doktorların Role alanını güncelleme
+        public async Task<int> UpdateAllDoctorRoles()
+        {
+            try
+            {
+                _logger.LogInformation("Tüm doktorların Role alanı güncelleniyor...");
+
+                // Tüm doktorları al
+                var doctors = await _unitOfWork.Doctors.GetAll();
+                if (doctors == null || !doctors.Any())
+                {
+                    _logger.LogInformation("Güncellenecek doktor bulunamadı.");
+                    return 0;
+                }
+
+                int updatedCount = 0;
+
+                // Her doktorun Role alanını kontrol et ve güncelle
+                foreach (var doctor in doctors)
+                {
+                    if (string.IsNullOrEmpty(doctor.Role))
+                    {
+                        doctor.Role = "doctor";
+                        _unitOfWork.Doctors.Update(doctor);
+                        updatedCount++;
+                    }
+                }
+
+                if (updatedCount > 0)
+                {
+                    _unitOfWork.Complete();
+                    _logger.LogInformation($"{updatedCount} doktorun Role alanı güncellendi.");
+                }
+                else
+                {
+                    _logger.LogInformation("Güncellenecek doktor bulunamadı.");
+                }
+
+                return updatedCount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Doktor rollerini güncelleme sırasında bir hata oluştu.");
+                return -1;
+            }
+        }
+
         public async Task<int> CleanupDoctorUsersFromAppUsers()
         {
             try
@@ -234,9 +284,8 @@ namespace FullstackWithFlutter.Services
                     }
                 }
 
-                // DoctorId değeri olan kullanıcıları da bul
-                var usersWithDoctorId = await _unitOfWork.AppUsers.Find(u => u.DoctorId.HasValue && u.DoctorId > 0);
-                usersToDelete.AddRange(usersWithDoctorId);
+                // Not: DoctorId alanı artık AppUser modelinde bulunmuyor
+                // Bu nedenle sadece email ile eşleşen kullanıcıları siliyoruz
 
                 // Tekrarlanan kullanıcıları kaldır
                 usersToDelete = usersToDelete.Distinct().ToList();

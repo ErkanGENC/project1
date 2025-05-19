@@ -60,11 +60,9 @@ class DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
         return;
       }
 
-      // Kullanıcı rolünü ve doktor ID'sini kontrol et
+      // Kullanıcı rolünü kontrol et
       final userRole = currentUser.role.toLowerCase();
-      final doctorId = currentUser.doctorId;
-      final isDoctorUser =
-          userRole == 'doctor' && doctorId != null && doctorId > 0;
+      final isDoctorUser = userRole == 'doctor';
 
       if (!isDoctorUser) {
         // Doktor değilse, uygun sayfaya yönlendir

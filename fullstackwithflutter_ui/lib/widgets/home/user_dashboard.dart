@@ -82,13 +82,17 @@ class UserDashboard extends StatelessWidget {
                   Text(
                     currentUser?.doctorName != null &&
                             currentUser!.doctorName!.isNotEmpty
-                        ? 'Doktorunuz: ${currentUser!.doctorName}'
+                        ? 'Doktorunuz: Dr. ${currentUser!.doctorName}'
                         : 'Henüz bir doktor seçmediniz',
                     style: TextStyle(
                       fontSize: 14,
+                      fontWeight: currentUser?.doctorName != null &&
+                              currentUser!.doctorName!.isNotEmpty
+                          ? FontWeight.w500
+                          : FontWeight.normal,
                       color: currentUser?.doctorName != null &&
                               currentUser!.doctorName!.isNotEmpty
-                          ? AppTheme.secondaryTextColor
+                          ? Colors.teal
                           : Colors.orange,
                     ),
                   ),
@@ -241,42 +245,48 @@ class UserDashboard extends StatelessWidget {
                 () => Navigator.pushNamed(context, AppRoutes.profile),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                context,
-                'Doktor Seç',
-                Icons.medical_services_outlined,
-                Colors.teal,
-                () {
-                  // Kullanıcının kendi doktorunu seçmesi için
-                  // kullanıcı bilgisini parametre olarak geçir
-                  if (currentUser != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SelectDoctorScreen(
-                          user: currentUser!,
-                          onDoctorSelected: (updatedUser) {
-                            // Kullanıcı bilgilerini güncelle ve sayfayı yenile
-                            onRefresh();
-                          },
+            // Eğer kullanıcının zaten bir doktoru varsa (randevu onaylandığında otomatik atanır)
+            // "Doktor Seç" butonunu gösterme
+            if (currentUser?.doctorName == null ||
+                currentUser!.doctorName!.isEmpty)
+              const SizedBox(width: 12),
+            if (currentUser?.doctorName == null ||
+                currentUser!.doctorName!.isEmpty)
+              Expanded(
+                child: _buildActionCard(
+                  context,
+                  'Doktor Seç',
+                  Icons.medical_services_outlined,
+                  Colors.teal,
+                  () {
+                    // Kullanıcının kendi doktorunu seçmesi için
+                    // kullanıcı bilgisini parametre olarak geçir
+                    if (currentUser != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SelectDoctorScreen(
+                            user: currentUser!,
+                            onDoctorSelected: (updatedUser) {
+                              // Kullanıcı bilgilerini güncelle ve sayfayı yenile
+                              onRefresh();
+                            },
+                          ),
                         ),
-                      ),
-                    );
-                  } else {
-                    // Kullanıcı bilgisi yoksa uyarı göster
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                            'Kullanıcı bilgileriniz yüklenemedi. Lütfen tekrar deneyin.'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
+                      );
+                    } else {
+                      // Kullanıcı bilgisi yoksa uyarı göster
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Kullanıcı bilgileriniz yüklenemedi. Lütfen tekrar deneyin.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
               ),
-            ),
           ],
         ),
       ],

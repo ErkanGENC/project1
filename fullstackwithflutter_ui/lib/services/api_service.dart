@@ -285,37 +285,12 @@ class ApiService {
             if (responseData.containsKey('user')) {
               final userData = responseData['user'] as Map<String, dynamic>;
 
-              // Özel durum: Erkan GENÇ kullanıcısı için kontrol
-              if (userData.containsKey('fullName') &&
-                  userData['fullName'] == 'Erkan GENÇ') {
-                // Erkan GENÇ kullanıcısı için doctorId'yi 0 yap ve rolü user olarak ayarla
-                userData['doctorId'] = 0;
-                userData['role'] = 'user';
-                print(
-                    'Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
-              }
-              // Diğer kullanıcılar için normal kontrol
-              else if (userData.containsKey('doctorId') &&
-                  userData['doctorId'] != null &&
-                  userData['doctorId'] is int &&
-                  userData['doctorId'] > 0) {
-                // Gerçek doktor kullanıcıları için
-                userData['role'] = 'doctor';
-              } else {
-                // doctorId null, 0 veya geçersiz ise, kullanıcı doktor değildir
-                if (userData.containsKey('role') &&
-                    userData['role'] != null &&
-                    userData['role'].toString().toLowerCase() == 'doctor') {
-                  userData['role'] =
-                      'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
-                } else if (userData.containsKey('role') &&
-                    (userData['role'] == null || userData['role'] == '')) {
-                  // Rol null veya boş ise, user olarak ayarla
-                  userData['role'] = 'user';
-                }
-              }
+              // User nesnesine dönüştür ve rolünü belirle
+              final user = User.fromJson(userData);
+              _determineUserRole(user);
 
-              await saveUserData(userData);
+              // Güncellenmiş kullanıcı verilerini kaydet
+              await saveUserData(user.toJson());
             } else {
               // Eğer API kullanıcı bilgilerini dönmüyorsa, email'i kaydedelim
               await saveUserData({
@@ -333,37 +308,12 @@ class ApiService {
           if (data.containsKey('user')) {
             final userData = data['user'] as Map<String, dynamic>;
 
-            // Özel durum: Erkan GENÇ kullanıcısı için kontrol
-            if (userData.containsKey('fullName') &&
-                userData['fullName'] == 'Erkan GENÇ') {
-              // Erkan GENÇ kullanıcısı için doctorId'yi 0 yap ve rolü user olarak ayarla
-              userData['doctorId'] = 0;
-              userData['role'] = 'user';
-              print(
-                  'Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
-            }
-            // Diğer kullanıcılar için normal kontrol
-            else if (userData.containsKey('doctorId') &&
-                userData['doctorId'] != null &&
-                userData['doctorId'] is int &&
-                userData['doctorId'] > 0) {
-              // Gerçek doktor kullanıcıları için
-              userData['role'] = 'doctor';
-            } else {
-              // doctorId null, 0 veya geçersiz ise, kullanıcı doktor değildir
-              if (userData.containsKey('role') &&
-                  userData['role'] != null &&
-                  userData['role'].toString().toLowerCase() == 'doctor') {
-                userData['role'] =
-                    'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
-              } else if (userData.containsKey('role') &&
-                  (userData['role'] == null || userData['role'] == '')) {
-                // Rol null veya boş ise, user olarak ayarla
-                userData['role'] = 'user';
-              }
-            }
+            // User nesnesine dönüştür ve rolünü belirle
+            final user = User.fromJson(userData);
+            _determineUserRole(user);
 
-            await saveUserData(userData);
+            // Güncellenmiş kullanıcı verilerini kaydet
+            await saveUserData(user.toJson());
           } else {
             // Eğer API kullanıcı bilgilerini dönmüyorsa, email'i kaydedelim
             await saveUserData({
@@ -391,6 +341,9 @@ class ApiService {
             final currentUser = await getCurrentUser();
 
             if (currentUser != null) {
+              // Kullanıcı rolünü belirle
+              _determineUserRole(currentUser);
+
               // Kullanıcı bilgilerini güncelle
               await saveUserData(currentUser.toJson());
             }
@@ -1022,23 +975,8 @@ class ApiService {
         // Kullanıcı bilgileri varsa, User nesnesine dönüştür
         final user = User.fromJson(userData);
 
-        // Özel durum: Erkan GENÇ kullanıcısı için kontrol
-        if (user.fullName == 'Erkan GENÇ') {
-          // Erkan GENÇ kullanıcısı için doctorId'yi 0 yap ve rolü user olarak ayarla
-          user.role = 'user';
-          print(
-              'getCurrentUser: Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
-        }
-        // Diğer kullanıcılar için normal kontrol
-        else if (user.doctorId != null && user.doctorId! > 0) {
-          user.role = 'doctor';
-        } else {
-          // doctorId null veya 0 ise, kullanıcı doktor değildir
-          if (user.role.toLowerCase() == 'doctor') {
-            user.role =
-                'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
-          }
-        }
+        // Kullanıcı rolünü belirle
+        _determineUserRole(user);
 
         return user;
       }
@@ -1075,33 +1013,11 @@ class ApiService {
             userData = Map<String, dynamic>.from(decodedData);
           }
 
-          // Kullanıcı bilgilerini kaydet
-          await saveUserData(userData);
-
           // User nesnesine dönüştür
           final user = User.fromJson(userData);
 
-          // Özel durum: Erkan GENÇ kullanıcısı için kontrol
-          if (user.fullName == 'Erkan GENÇ') {
-            // Erkan GENÇ kullanıcısı için rolü user olarak ayarla
-            user.role = 'user';
-            print(
-                'refreshUser: Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
-
-            // userData'yı da güncelle
-            userData['doctorId'] = 0;
-            userData['role'] = 'user';
-          }
-          // Diğer kullanıcılar için normal kontrol
-          else if (user.doctorId != null && user.doctorId! > 0) {
-            user.role = 'doctor';
-          } else {
-            // doctorId null veya 0 ise, kullanıcı doktor değildir
-            if (user.role.toLowerCase() == 'doctor') {
-              user.role =
-                  'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
-            }
-          }
+          // Kullanıcı rolünü belirle
+          _determineUserRole(user);
 
           // Kullanıcı verilerini güncelle
           final updatedUserData = user.toJson();
@@ -1113,8 +1029,102 @@ class ApiService {
 
       return null;
     } catch (e) {
+      print('getCurrentUser error: $e');
       // Hata durumunda null dön
       return null;
+    }
+  }
+
+  // Kullanıcı rolünü belirleyen yardımcı metod
+  void _determineUserRole(User user) {
+    // Debug için mevcut rol bilgisini yazdır
+    print(
+        '_determineUserRole - Mevcut rol: ${user.role}, Doktor ID: ${user.doctorId}');
+
+    // Backend'den gelen rol bilgisini kontrol et
+    if (user.role.isNotEmpty) {
+      // Backend'den gelen rol bilgisi varsa, bu değeri koru
+      // Sadece doktor ve admin rollerini koru, diğerlerini user olarak ayarla
+      final lowerRole = user.role.toLowerCase();
+      if (lowerRole == 'doctor' || lowerRole == 'admin') {
+        // Rol zaten doğru ayarlanmış, değiştirme
+        print('_determineUserRole - Backend rolü korunuyor: ${user.role}');
+        return;
+      }
+    }
+
+    // Özel durum: Erkan GENÇ kullanıcısı için kontrol
+    if (user.fullName == 'Erkan GENÇ') {
+      // Erkan GENÇ kullanıcısı için rolü user olarak ayarla
+      user.role = 'user';
+      print(
+          '_determineUserRole - Özel durum: Erkan GENÇ için rol "user" olarak ayarlandı');
+      return;
+    }
+
+    // Diğer tüm kullanıcılar için varsayılan rol
+    user.role = 'user';
+    print('_determineUserRole - Varsayılan rol "user" olarak ayarlandı');
+  }
+
+  // Kullanıcı bilgilerini yenile (API'den en güncel bilgileri al)
+  Future<User?> refreshUser() async {
+    try {
+      // Token kontrolü
+      final token = await getToken();
+      if (token == null) {
+        return null;
+      }
+
+      // Mevcut kullanıcı ID'sini al
+      final userData = await getUserData();
+      if (userData == null || !userData.containsKey('id')) {
+        return null;
+      }
+
+      // API'den kullanıcı bilgilerini al
+      final response = await http.get(
+        Uri.parse('$baseUrl/Users/GetCurrentUser'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API'den gelen veri bir nesne ise
+        if (decodedData is Map) {
+          Map<String, dynamic> userData = {};
+
+          // API yanıt formatını kontrol et
+          if (decodedData.containsKey('data') &&
+              decodedData['status'] == true) {
+            userData = Map<String, dynamic>.from(decodedData['data']);
+          } else {
+            userData = Map<String, dynamic>.from(decodedData);
+          }
+
+          // User nesnesine dönüştür
+          final user = User.fromJson(userData);
+
+          // Kullanıcı rolünü belirle
+          _determineUserRole(user);
+
+          // Kullanıcı verilerini güncelle
+          final updatedUserData = user.toJson();
+          await saveUserData(updatedUserData);
+
+          return user;
+        }
+      }
+
+      // API'den güncel bilgiler alınamazsa, yerel bilgileri kullan
+      return getCurrentUser();
+    } catch (e) {
+      // Hata durumunda yerel bilgileri kullan
+      return getCurrentUser();
     }
   }
 

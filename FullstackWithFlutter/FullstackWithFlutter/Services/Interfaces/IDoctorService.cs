@@ -11,5 +11,6 @@ namespace FullstackWithFlutter.Services.Interfaces
         Task<bool> UpdateDoctor(int doctorId, SaveDoctorViewModel doctorViewModel);
         Task<bool> DeleteDoctor(int doctorId);
         Task<int> CleanupDoctorUsersFromAppUsers();
+        Task<int> UpdateAllDoctorRoles();
     }
 }

@@ -56,15 +56,20 @@ namespace FullstackWithFlutter.Services
                         FullName = doctor.Name,
                         Email = doctor.Email,
                         MobileNumber = doctor.PhoneNumber,
-                        Role = "doctor", // Doktor rolünü belirt
-                        DoctorId = doctor.Id,
-                        DoctorName = doctor.Name,
-                        Specialization = doctor.Specialization,
+                        Role = doctor.Role ?? "doctor", // Doktor rolünü Doctor modelinden al, yoksa "doctor" olarak ayarla
                         CreatedDate = doctor.CreatedDate,
                         CreatedBy = doctor.CreatedBy,
                         UpdatedDate = doctor.UpdatedDate,
                         UpdatedBy = doctor.UpdatedBy
                     };
+
+                    // Eğer doktorun Role alanı boşsa, güncelle
+                    if (string.IsNullOrEmpty(doctor.Role))
+                    {
+                        doctor.Role = "doctor";
+                        _unitofWork.Doctors.Update(doctor);
+                        _unitofWork.Complete();
+                    }
 
                     // Doktor bilgilerini döndür
                     var doctorViewModel = _mapper.Map<AppUserViewModel>(doctorUser);
@@ -284,21 +289,19 @@ namespace FullstackWithFlutter.Services
                 claims.Add(new Claim("role", user.Role));
             }
 
-            // Doktor ID'si varsa ekle
-            if (user.DoctorId.HasValue)
+            // Doktor kullanıcıları için özel işlem
+            if (user.Role == "doctor")
             {
-                claims.Add(new Claim("doctorId", user.DoctorId.Value.ToString()));
-            }
+                // Doktor ID'sini ekle
+                claims.Add(new Claim("doctorId", user.Id.ToString()));
 
-            // Doktor adı ve uzmanlık alanı varsa ekle
-            if (!string.IsNullOrEmpty(user.DoctorName))
-            {
-                claims.Add(new Claim("doctorName", user.DoctorName));
-            }
-
-            if (!string.IsNullOrEmpty(user.Specialization))
-            {
-                claims.Add(new Claim("specialization", user.Specialization));
+                // Doktor bilgilerini doctors tablosundan al
+                var doctor = _unitofWork.Doctors.Get(user.Id).Result;
+                if (doctor != null)
+                {
+                    claims.Add(new Claim("doctorName", doctor.Name ?? ""));
+                    claims.Add(new Claim("specialization", doctor.Specialization ?? ""));
+                }
             }
 
             // Token oluştur

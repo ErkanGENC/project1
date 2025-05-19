@@ -133,6 +133,19 @@ namespace FullstackWithFlutter.Services
                 appointment.UpdatedDate = DateTime.Now;
                 appointment.UpdatedBy = "API";
                 _unitOfWork.Appointments.Update(appointment);
+
+                // Randevu onaylandığında aktivite kaydı oluştur
+                if (newStatus.ToLower() == "onaylandı" && appointment.PatientId > 0 && appointment.DoctorId > 0)
+                {
+                    // Doktoru bul
+                    var doctor = await _unitOfWork.Doctors.Get(appointment.DoctorId);
+                    if (doctor != null)
+                    {
+                        _logger.LogInformation("Appointment approved for patient {PatientId} with doctor {DoctorId} ({DoctorName})",
+                            appointment.PatientId, doctor.Id, doctor.Name);
+                    }
+                }
+
                 var result = _unitOfWork.Complete();
 
                 if (result > 0)
