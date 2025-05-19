@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../models/appointment_model.dart';
+import '../../models/doctor_model.dart';
 
 class AppointmentsManagement extends StatefulWidget {
   const AppointmentsManagement({super.key});
@@ -109,6 +110,8 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
     final typeController = TextEditingController();
     DateTime selectedDate = DateTime.now();
     String selectedTime = '09:00';
+    int patientId = 0;
+    int doctorId = 0;
 
     final List<String> timeSlots = [
       '09:00',
@@ -237,6 +240,8 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                 // API'ye yeni randevu eklemek için istek at
                 final newAppointment = Appointment(
                   id: 0, // API tarafında otomatik atanacak
+                  patientId: patientId,
+                  doctorId: doctorId,
                   patientName: patientController.text,
                   doctorName: doctorController.text,
                   date: selectedDate,
@@ -340,6 +345,8 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                 if (index != -1) {
                   final updatedAppointment = Appointment(
                     id: appointment.id,
+                    patientId: appointment.patientId,
+                    doctorId: appointment.doctorId,
                     patientName: appointment.patientName,
                     doctorName: appointment.doctorName,
                     date: appointment.date,
@@ -376,6 +383,8 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                 if (index != -1) {
                   final updatedAppointment = Appointment(
                     id: appointment.id,
+                    patientId: appointment.patientId,
+                    doctorId: appointment.doctorId,
                     patientName: appointment.patientName,
                     doctorName: appointment.doctorName,
                     date: appointment.date,

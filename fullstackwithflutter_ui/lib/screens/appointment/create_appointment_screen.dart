@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../models/appointment_model.dart';
 import '../../models/doctor_model.dart';
+import '../../models/user_model.dart';
 import '../../services/api_service.dart';
 import 'package:intl/intl.dart';
 
@@ -31,6 +32,7 @@ class CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
 
   List<Doctor> _doctors = [];
   Doctor? _selectedDoctor;
+  User? _currentUser;
 
   final List<String> _timeSlots = [
     '09:00',
@@ -71,8 +73,21 @@ class CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
       _patientController.text = widget.patientName!;
     }
 
-    // Doktorları yükle
+    // Mevcut kullanıcıyı ve doktorları yükle
+    _loadCurrentUser();
     _loadDoctors();
+  }
+
+  // Mevcut kullanıcıyı yükle
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await _apiService.getCurrentUser();
+      setState(() {
+        _currentUser = user;
+      });
+    } catch (e) {
+      print('Kullanıcı bilgileri yüklenirken hata: $e');
+    }
   }
 
   @override
@@ -157,7 +172,9 @@ class CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
       // Yeni randevu oluştur
       final newAppointment = Appointment(
         id: 0, // API tarafında otomatik atanacak
+        patientId: _currentUser?.id ?? 0,
         patientName: _patientController.text,
+        doctorId: _selectedDoctor?.id ?? 0,
         doctorName: _selectedDoctor?.name ?? '',
         date: _selectedDate,
         time: _selectedTime,
@@ -165,8 +182,14 @@ class CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
         type: _typeController.text,
       );
 
+      // Debug için randevu verilerini yazdır
+      print('Randevu verileri: ${newAppointment.toJson()}');
+
       // API'ye istek at
       final result = await _apiService.addAppointment(newAppointment);
+
+      // API yanıtını yazdır
+      print('API yanıtı: $result');
 
       if (!mounted) return;
 
@@ -271,11 +294,15 @@ class CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                             prefixIcon: Icon(Icons.medical_services),
                             border: OutlineInputBorder(),
                           ),
+                          isExpanded: true, // Taşmayı önlemek için genişlet
                           items: _doctors.map((doctor) {
                             return DropdownMenuItem<Doctor>(
                               value: doctor,
                               child: Text(
-                                  'Dr. ${doctor.name} (${doctor.specialization})'),
+                                'Dr. ${doctor.name} (${doctor.specialization})',
+                                overflow: TextOverflow
+                                    .ellipsis, // Uzun metinleri kırp
+                              ),
                             );
                           }).toList(),
                           onChanged: (Doctor? newValue) {

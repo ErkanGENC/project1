@@ -21,19 +21,9 @@ class HomeScreenState extends State<HomeScreen>
   final ApiService _apiService = ApiService();
   List<User> _users = [];
   List<User> _filteredUsers = [];
-  List<Appointment> _appointments = [];
-  List<String> _patientsWithAppointments = [];
   bool _isLoading = true;
   String _errorMessage = '';
   String _searchQuery = '';
-
-  // Kategori indeksi
-  // 0: Tümü
-  // 1: Aktif Hastalar (Son 30 gün içinde randevusu olan hastalar)
-  // 2: Yeni Hastalar (Son 7 gün içinde kaydedilmiş hastalar)
-  // 3: Randevulu Hastalar (Herhangi bir zamanda randevusu olan hastalar)
-  // 4: Doktor Atanmış Hastalar (Bir doktora atanmış hastalar)
-  int _selectedCategoryIndex = 0;
 
   // Mevcut kullanıcı
   User? _currentUser;
@@ -74,7 +64,6 @@ class HomeScreenState extends State<HomeScreen>
       }
     } catch (e) {
       // Hata durumunda sessizce devam et
-      print('Kullanıcı bilgileri alınırken hata: $e');
     }
   }
 
@@ -106,167 +95,36 @@ class HomeScreenState extends State<HomeScreen>
 
   // Kullanıcıları filtrele
   void _filterUsers() {
-    if (_searchQuery.isEmpty && _selectedCategoryIndex == 0) {
-      // Arama yoksa ve tüm kategoriler seçiliyse, tüm kullanıcıları göster
+    if (_searchQuery.isEmpty) {
+      // Arama yoksa tüm kullanıcıları göster
       setState(() {
         _filteredUsers = _users;
       });
       return;
     }
 
-    // Önce kategoriye göre filtrele
-    List<User> categoryFiltered = _users;
-    if (_selectedCategoryIndex > 0) {
-      // Gerçek verilere dayalı filtreleme
-      final now = DateTime.now();
-      final oneWeekAgo = now.subtract(const Duration(days: 7));
-
-      switch (_selectedCategoryIndex) {
-        case 1: // Aktif Hastalar - Son 30 gün içinde randevusu olan hastalar
-          // Randevuları getir ve son 30 gün içinde randevusu olan hastaları filtrele
-          _fetchActivePatients();
-          return; // Filtreleme _fetchActivePatients içinde yapılıyor
-        case 2: // Yeni Hastalar - Son 7 gün içinde kaydedilmiş kullanıcılar
-          categoryFiltered = _users.where((user) {
-            // Kullanıcının kayıt tarihi varsa ve son 7 gün içindeyse
-            if (user.createdDate != null) {
-              return user.createdDate!.isAfter(oneWeekAgo);
-            }
-            return false;
-          }).toList();
-          break;
-        case 3: // Randevulu Hastalar - Randevusu olan kullanıcılar
-          // Gerçek randevu verilerine göre filtreleme yapacağız
-          // Önce tüm randevuları alıp, hasta adlarını bir listeye ekleyeceğiz
-          _fetchAppointmentsForFilter();
-          return; // Filtreleme _fetchAppointmentsForFilter içinde yapılıyor
-        case 4: // Doktor Atanmış Hastalar
-          categoryFiltered = _users
-              .where((user) =>
-                  user.doctorId != null &&
-                  user.doctorName != null &&
-                  user.doctorName!.isNotEmpty)
-              .toList();
-
-          break;
-      }
-    }
-
-    // Sonra arama sorgusuna göre filtrele
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      setState(() {
-        _filteredUsers = categoryFiltered.where((user) {
-          return user.fullName.toLowerCase().contains(query) ||
-              user.email.toLowerCase().contains(query) ||
-              user.phoneNumber.toLowerCase().contains(query);
-        }).toList();
-      });
-    } else {
-      setState(() {
-        _filteredUsers = categoryFiltered;
-      });
-    }
-  }
-
-  // Randevuları getir ve randevulu hastaları filtrele
-  Future<void> _fetchAppointmentsForFilter() async {
-    try {
-      // Tüm randevuları al
-      final appointments = await _apiService.getAllAppointments();
-
-      // Randevusu olan hastaların adlarını bir listeye ekle
-      final patientsWithAppointments = appointments
-          .map((appointment) => appointment.patientName)
-          .toSet() // Tekrar eden isimleri kaldır
-          .toList();
-
-      setState(() {
-        _appointments = appointments;
-        _patientsWithAppointments = patientsWithAppointments;
-
-        // Randevusu olan kullanıcıları filtrele
-        // Tam eşleşme yaparak sadece gerçekten randevusu olan hastaları göster
-        _filteredUsers = _users.where((user) {
-          // Kullanıcının tam adı randevulu hastalar listesinde var mı kontrol et
-          return patientsWithAppointments.contains(user.fullName);
-        }).toList();
-
-        // TabBar'ı güncelle
-        setState(() {});
-      });
-    } catch (e) {
-      // Hata durumunda sessizce devam et
-      // Hata durumunda boş liste göster
-      setState(() {
-        _filteredUsers = [];
-        _patientsWithAppointments = [];
-      });
-    }
-  }
-
-  // Aktif hastaları getir (son 30 gün içinde randevusu olanlar)
-  Future<void> _fetchActivePatients() async {
-    try {
-      // Tüm randevuları al
-      final appointments = await _apiService.getAllAppointments();
-
-      // Son 30 gün içindeki randevuları filtrele
-      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      final recentAppointments = appointments
-          .where((appointment) => appointment.date.isAfter(thirtyDaysAgo))
-          .toList();
-
-      // Son 30 gün içinde randevusu olan hastaların adlarını bir listeye ekle
-      final activePatientNames = recentAppointments
-          .map((appointment) => appointment.patientName)
-          .toSet() // Tekrar eden isimleri kaldır
-          .toList();
-
-      setState(() {
-        // Son 30 gün içinde randevusu olan kullanıcıları filtrele
-        _filteredUsers = _users.where((user) {
-          // Kullanıcının tam adı aktif hastalar listesinde var mı kontrol et
-          return activePatientNames.contains(user.fullName);
-        }).toList();
-
-        // TabBar'ı güncelle
-        setState(() {});
-      });
-    } catch (e) {
-      // Hata durumunda sessizce devam et
-      // Hata durumunda boş liste göster
-      setState(() {
-        _filteredUsers = [];
-      });
-    }
+    // Arama sorgusuna göre filtrele
+    final query = _searchQuery.toLowerCase();
+    setState(() {
+      _filteredUsers = _users.where((user) {
+        return user.fullName.toLowerCase().contains(query) ||
+            user.email.toLowerCase().contains(query) ||
+            user.phoneNumber.toLowerCase().contains(query);
+      }).toList();
+    });
   }
 
   Future<void> _fetchUsers() async {
     try {
       final users = await _apiService.getAllUsers();
 
-      // Tüm randevuları da yükle
-      final appointments = await _apiService.getAllAppointments();
-
       if (mounted) {
         setState(() {
           _users = users;
-          _appointments = appointments;
           _filteredUsers = users; // Başlangıçta tüm kullanıcıları göster
           _isLoading = false;
           _errorMessage = ''; // Hata mesajını temizle
         });
-
-        // Seçili kategoriye göre filtreleme yap
-        if (_selectedCategoryIndex == 1) {
-          _fetchActivePatients();
-        } else if (_selectedCategoryIndex == 3) {
-          _fetchAppointmentsForFilter();
-        } else {
-          // TabBar'ı güncelle
-          setState(() {});
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -348,152 +206,6 @@ class HomeScreenState extends State<HomeScreen>
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.people),
-            title: Row(
-              children: [
-                const Text('Tümü'),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${_users.length}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-            selected: _selectedCategoryIndex == 0,
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                _selectedCategoryIndex = 0;
-                _filterUsers();
-              });
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: Row(
-              children: [
-                const Text('Aktif Hastalar'),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${_appointments.where((a) => a.date.isAfter(DateTime.now().subtract(const Duration(days: 30)))).map((a) => a.patientName).toSet().length}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-            selected: _selectedCategoryIndex == 1,
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                _selectedCategoryIndex = 1;
-                _filterUsers();
-              });
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_add),
-            title: Row(
-              children: [
-                const Text('Yeni Hastalar'),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${_users.where((user) => user.createdDate != null && user.createdDate!.isAfter(DateTime.now().subtract(const Duration(days: 7)))).length}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-            selected: _selectedCategoryIndex == 2,
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                _selectedCategoryIndex = 2;
-                _filterUsers();
-              });
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: Row(
-              children: [
-                const Text('Randevulu Hastalar'),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${_patientsWithAppointments.length}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-            selected: _selectedCategoryIndex == 3,
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                _selectedCategoryIndex = 3;
-                _filterUsers();
-              });
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.medical_services),
-            title: Row(
-              children: [
-                const Text('Doktor Atanmış Hastalar'),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${_users.where((user) => user.doctorId != null && user.doctorName != null && user.doctorName!.isNotEmpty).length}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-            selected: _selectedCategoryIndex == 4,
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                _selectedCategoryIndex = 4;
-                _filterUsers();
-              });
-            },
-          ),
-          const Divider(),
-          ListTile(
             leading: const Icon(Icons.medical_services),
             title: const Text('Diş Sağlığı'),
             onTap: () {
@@ -523,14 +235,6 @@ class HomeScreenState extends State<HomeScreen>
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, AppRoutes.profile);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.admin_panel_settings),
-            title: const Text('Admin Paneli'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, AppRoutes.adminDashboard);
             },
           ),
         ],
@@ -631,14 +335,6 @@ class HomeScreenState extends State<HomeScreen>
             label: 'Hastalar',
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Randevu oluşturma ekranını aç
-          Navigator.pushNamed(context, AppRoutes.createAppointment);
-        },
-        tooltip: 'Randevu Oluştur',
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -885,6 +581,7 @@ class HomeScreenState extends State<HomeScreen>
               itemBuilder: (context, index) {
                 return UserListItem(
                   user: _filteredUsers[index],
+                  currentUser: _currentUser, // Mevcut kullanıcı bilgisini aktar
                   onUserUpdated: (updatedUser) {
                     // Kullanıcı listesini güncelle
                     setState(() {

@@ -4,6 +4,8 @@ import '../../models/appointment_model.dart';
 import '../../models/user_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/api_service.dart';
+import '../../screens/doctor/select_doctor_screen.dart';
+import '../../screens/appointment/create_appointment_screen.dart';
 import 'dental_health_tips.dart';
 
 class UserDashboard extends StatelessWidget {
@@ -130,7 +132,23 @@ class UserDashboard extends StatelessWidget {
                 'Randevu Oluştur',
                 Icons.calendar_today,
                 AppTheme.accentColor,
-                () => Navigator.pushNamed(context, AppRoutes.createAppointment),
+                () {
+                  // Kullanıcının kendi adına randevu oluşturması için
+                  // kullanıcı adını parametre olarak geçir
+                  if (currentUser != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateAppointmentScreen(
+                          patientName: currentUser!.fullName,
+                        ),
+                      ),
+                    );
+                  } else {
+                    // Kullanıcı bilgisi yoksa normal yönlendirme yap
+                    Navigator.pushNamed(context, AppRoutes.createAppointment);
+                  }
+                },
               ),
             ),
           ],
@@ -155,9 +173,31 @@ class UserDashboard extends StatelessWidget {
                 Icons.medical_services_outlined,
                 Colors.teal,
                 () {
-                  // Doktor seçme ekranına yönlendir
-                  // Şimdilik randevu oluşturma ekranına yönlendirelim
-                  Navigator.pushNamed(context, AppRoutes.createAppointment);
+                  // Kullanıcının kendi doktorunu seçmesi için
+                  // kullanıcı bilgisini parametre olarak geçir
+                  if (currentUser != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SelectDoctorScreen(
+                          user: currentUser!,
+                          onDoctorSelected: (updatedUser) {
+                            // Kullanıcı bilgilerini güncelle ve sayfayı yenile
+                            onRefresh();
+                          },
+                        ),
+                      ),
+                    );
+                  } else {
+                    // Kullanıcı bilgisi yoksa uyarı göster
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Kullanıcı bilgileriniz yüklenemedi. Lütfen tekrar deneyin.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 },
               ),
             ),
@@ -247,8 +287,24 @@ class UserDashboard extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
-                        onPressed: () => Navigator.pushNamed(
-                            context, AppRoutes.createAppointment),
+                        onPressed: () {
+                          // Kullanıcının kendi adına randevu oluşturması için
+                          // kullanıcı adını parametre olarak geçir
+                          if (currentUser != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CreateAppointmentScreen(
+                                  patientName: currentUser!.fullName,
+                                ),
+                              ),
+                            );
+                          } else {
+                            // Kullanıcı bilgisi yoksa normal yönlendirme yap
+                            Navigator.pushNamed(
+                                context, AppRoutes.createAppointment);
+                          }
+                        },
                         icon: const Icon(Icons.add),
                         label: const Text('Randevu Oluştur'),
                       ),
@@ -319,7 +375,19 @@ class UserDashboard extends StatelessWidget {
               onPressed: () {
                 // Tüm randevuları göster
                 // Şimdilik randevu oluşturma ekranına yönlendirelim
-                Navigator.pushNamed(context, AppRoutes.createAppointment);
+                if (currentUser != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateAppointmentScreen(
+                        patientName: currentUser!.fullName,
+                      ),
+                    ),
+                  );
+                } else {
+                  // Kullanıcı bilgisi yoksa normal yönlendirme yap
+                  Navigator.pushNamed(context, AppRoutes.createAppointment);
+                }
               },
               child: const Text('Tüm Randevuları Göster'),
             ),
@@ -478,7 +546,7 @@ class UserDashboard extends StatelessWidget {
       final summary = await apiService.getUserDentalSummary(currentUser!.id);
       return summary;
     } catch (e) {
-      print('Error loading dental summary: $e');
+      // Hata durumunda varsayılan değerleri döndür
       return {
         'brushingPercentage': 0.0,
         'flossPercentage': 0.0,

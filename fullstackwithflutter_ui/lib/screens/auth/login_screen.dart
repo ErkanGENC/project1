@@ -87,11 +87,26 @@ class LoginScreenState extends State<LoginScreen> {
         // Kullanıcı rolünü kontrol et
         final role = currentUser.role.toLowerCase();
 
+        // Doktor ID'sini kontrol et
+        final doctorId = currentUser.doctorId;
+
+        // Doktor kullanıcısı olup olmadığını kontrol et
+        // Doktor olması için hem role'ün "doctor" olması hem de doctorId'nin 0'dan büyük olması gerekir
+        final isDoctorUser =
+            role == 'doctor' && doctorId != null && doctorId > 0;
+
+        // Admin kullanıcısı olup olmadığını kontrol et
+        final isAdminUser = role == 'admin';
+
+        // Normal kullanıcı olup olmadığını kontrol et (doktor veya admin değilse)
+        final isNormalUser = !isDoctorUser && !isAdminUser;
+
         // Debug için rol bilgisini yazdır
-        print('LOGIN - Kullanıcı rolü: $role');
+        print(
+            'LOGIN - Kullanıcı rolü: $role, Doktor ID: $doctorId, Doktor mu: $isDoctorUser, Admin mi: $isAdminUser, Normal kullanıcı mı: $isNormalUser');
 
         // Role göre yönlendirme yap
-        if (role == 'doctor') {
+        if (isDoctorUser) {
           print(
               'LOGIN - Doktor rolü tespit edildi, doctor_dashboard sayfasına yönlendiriliyor...');
 
@@ -110,7 +125,7 @@ class LoginScreenState extends State<LoginScreen> {
               ),
             );
           }
-        } else if (role == 'admin') {
+        } else if (isAdminUser) {
           print(
               'LOGIN - Admin rolü tespit edildi, admin_dashboard sayfasına yönlendiriliyor...');
           if (mounted) {
@@ -125,10 +140,19 @@ class LoginScreenState extends State<LoginScreen> {
             );
           }
         } else {
+          // Doktor veya admin değilse, normal kullanıcı olarak işle
           print(
               'LOGIN - Normal kullanıcı rolü tespit edildi, welcome sayfasına yönlendiriliyor...');
           if (mounted) {
             Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+
+            // Yönlendirme mesajı göster
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kullanıcı paneline yönlendiriliyor...'),
+                backgroundColor: Colors.green,
+              ),
+            );
           }
         }
       } else {

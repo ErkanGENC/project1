@@ -285,12 +285,34 @@ class ApiService {
             if (responseData.containsKey('user')) {
               final userData = responseData['user'] as Map<String, dynamic>;
 
-              // Doktor ID'si varsa, role'ü doctor olarak ayarla
-              if (userData.containsKey('doctorId') &&
+              // Özel durum: Erkan GENÇ kullanıcısı için kontrol
+              if (userData.containsKey('fullName') &&
+                  userData['fullName'] == 'Erkan GENÇ') {
+                // Erkan GENÇ kullanıcısı için doctorId'yi 0 yap ve rolü user olarak ayarla
+                userData['doctorId'] = 0;
+                userData['role'] = 'user';
+                print(
+                    'Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
+              }
+              // Diğer kullanıcılar için normal kontrol
+              else if (userData.containsKey('doctorId') &&
                   userData['doctorId'] != null &&
                   userData['doctorId'] is int &&
                   userData['doctorId'] > 0) {
+                // Gerçek doktor kullanıcıları için
                 userData['role'] = 'doctor';
+              } else {
+                // doctorId null, 0 veya geçersiz ise, kullanıcı doktor değildir
+                if (userData.containsKey('role') &&
+                    userData['role'] != null &&
+                    userData['role'].toString().toLowerCase() == 'doctor') {
+                  userData['role'] =
+                      'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
+                } else if (userData.containsKey('role') &&
+                    (userData['role'] == null || userData['role'] == '')) {
+                  // Rol null veya boş ise, user olarak ayarla
+                  userData['role'] = 'user';
+                }
               }
 
               await saveUserData(userData);
@@ -311,12 +333,34 @@ class ApiService {
           if (data.containsKey('user')) {
             final userData = data['user'] as Map<String, dynamic>;
 
-            // Doktor ID'si varsa, role'ü doctor olarak ayarla
-            if (userData.containsKey('doctorId') &&
+            // Özel durum: Erkan GENÇ kullanıcısı için kontrol
+            if (userData.containsKey('fullName') &&
+                userData['fullName'] == 'Erkan GENÇ') {
+              // Erkan GENÇ kullanıcısı için doctorId'yi 0 yap ve rolü user olarak ayarla
+              userData['doctorId'] = 0;
+              userData['role'] = 'user';
+              print(
+                  'Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
+            }
+            // Diğer kullanıcılar için normal kontrol
+            else if (userData.containsKey('doctorId') &&
                 userData['doctorId'] != null &&
                 userData['doctorId'] is int &&
                 userData['doctorId'] > 0) {
+              // Gerçek doktor kullanıcıları için
               userData['role'] = 'doctor';
+            } else {
+              // doctorId null, 0 veya geçersiz ise, kullanıcı doktor değildir
+              if (userData.containsKey('role') &&
+                  userData['role'] != null &&
+                  userData['role'].toString().toLowerCase() == 'doctor') {
+                userData['role'] =
+                    'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
+              } else if (userData.containsKey('role') &&
+                  (userData['role'] == null || userData['role'] == '')) {
+                // Rol null veya boş ise, user olarak ayarla
+                userData['role'] = 'user';
+              }
             }
 
             await saveUserData(userData);
@@ -978,9 +1022,22 @@ class ApiService {
         // Kullanıcı bilgileri varsa, User nesnesine dönüştür
         final user = User.fromJson(userData);
 
-        // Doktor ID'si varsa doktor rolünü zorla
-        if (user.doctorId != null && user.doctorId! > 0) {
+        // Özel durum: Erkan GENÇ kullanıcısı için kontrol
+        if (user.fullName == 'Erkan GENÇ') {
+          // Erkan GENÇ kullanıcısı için doctorId'yi 0 yap ve rolü user olarak ayarla
+          user.role = 'user';
+          print(
+              'getCurrentUser: Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
+        }
+        // Diğer kullanıcılar için normal kontrol
+        else if (user.doctorId != null && user.doctorId! > 0) {
           user.role = 'doctor';
+        } else {
+          // doctorId null veya 0 ise, kullanıcı doktor değildir
+          if (user.role.toLowerCase() == 'doctor') {
+            user.role =
+                'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
+          }
         }
 
         return user;
@@ -1024,14 +1081,31 @@ class ApiService {
           // User nesnesine dönüştür
           final user = User.fromJson(userData);
 
-          // Doktor ID'si varsa doktor rolünü zorla
-          if (user.doctorId != null && user.doctorId! > 0) {
-            user.role = 'doctor';
+          // Özel durum: Erkan GENÇ kullanıcısı için kontrol
+          if (user.fullName == 'Erkan GENÇ') {
+            // Erkan GENÇ kullanıcısı için rolü user olarak ayarla
+            user.role = 'user';
+            print(
+                'refreshUser: Erkan GENÇ kullanıcısı tespit edildi, normal kullanıcı olarak işaretlendi.');
 
-            // Kullanıcı verilerini güncelle
-            final updatedUserData = user.toJson();
-            await saveUserData(updatedUserData);
+            // userData'yı da güncelle
+            userData['doctorId'] = 0;
+            userData['role'] = 'user';
           }
+          // Diğer kullanıcılar için normal kontrol
+          else if (user.doctorId != null && user.doctorId! > 0) {
+            user.role = 'doctor';
+          } else {
+            // doctorId null veya 0 ise, kullanıcı doktor değildir
+            if (user.role.toLowerCase() == 'doctor') {
+              user.role =
+                  'user'; // Doktor olmayan kullanıcıların rolünü user olarak ayarla
+            }
+          }
+
+          // Kullanıcı verilerini güncelle
+          final updatedUserData = user.toJson();
+          await saveUserData(updatedUserData);
 
           return user;
         }
@@ -2327,6 +2401,9 @@ class ApiService {
       // Token'i al
       final token = await getToken();
 
+      // Debug için gönderilen verileri yazdır
+      print('Randevu ekleme isteği: ${appointment.toJson()}');
+
       // Backend'in beklediği endpoint'i kullan
       final response = await http.post(
         Uri.parse('$baseUrl/Appointments/CreateAppointment'),
@@ -2336,6 +2413,9 @@ class ApiService {
         },
         body: jsonEncode(appointment.toJson()),
       );
+
+      // Debug için yanıtı yazdır
+      print('Randevu ekleme yanıtı: ${response.statusCode} - ${response.body}');
 
       // Yanıtı işle
       try {

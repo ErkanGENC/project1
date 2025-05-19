@@ -8,13 +8,22 @@ import '../services/api_service.dart';
 
 class UserListItem extends StatelessWidget {
   final User user;
+  final User? currentUser; // Mevcut giriş yapmış kullanıcı
   final Function(User)? onUserUpdated;
 
   const UserListItem({
     super.key,
     required this.user,
+    this.currentUser,
     this.onUserUpdated,
   });
+
+  // Mevcut kullanıcının kendi kaydı olup olmadığını kontrol et
+  bool _isCurrentUser() {
+    // Eğer currentUser null ise veya ID'ler eşleşmiyorsa false döndür
+    if (currentUser == null) return false;
+    return currentUser!.id == user.id;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,22 +174,31 @@ class UserListItem extends StatelessWidget {
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Randevu oluşturma butonu - sadece kullanıcının kendi kaydı için aktif
                   Container(
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withAlpha(25),
+                      color: _isCurrentUser()
+                          ? AppTheme.primaryColor.withAlpha(25)
+                          : Colors.grey.withAlpha(25),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.calendar_today_outlined,
-                        color: AppTheme.primaryColor,
+                        color: _isCurrentUser()
+                            ? AppTheme.primaryColor
+                            : Colors.grey,
                         size: 20,
                       ),
-                      onPressed: () {
-                        // Randevu oluşturma ekranını aç
-                        _showAddAppointmentDialog(context);
-                      },
-                      tooltip: 'Randevu Oluştur',
+                      onPressed: _isCurrentUser()
+                          ? () {
+                              // Randevu oluşturma ekranını aç
+                              _showAddAppointmentDialog(context);
+                            }
+                          : null, // Devre dışı bırak
+                      tooltip: _isCurrentUser()
+                          ? 'Randevu Oluştur'
+                          : 'Sadece kendi hesabınız için randevu oluşturabilirsiniz',
                       constraints: const BoxConstraints(
                         minWidth: 40,
                         minHeight: 40,
@@ -189,37 +207,46 @@ class UserListItem extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  // Doktor seçme butonu - sadece kullanıcının kendi kaydı için aktif
                   Container(
                     decoration: BoxDecoration(
-                      color: AppTheme.accentColor.withAlpha(25),
+                      color: _isCurrentUser()
+                          ? AppTheme.accentColor.withAlpha(25)
+                          : Colors.grey.withAlpha(25),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.medical_services_outlined,
-                        color: AppTheme.accentColor,
+                        color: _isCurrentUser()
+                            ? AppTheme.accentColor
+                            : Colors.grey,
                         size: 20,
                       ),
-                      onPressed: () {
-                        // Doktor seçme ekranını aç
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectDoctorScreen(
-                              user: user,
-                              onDoctorSelected: (updatedUser) {
-                                // Callback ile güncellenmiş kullanıcıyı geri döndür
-                                if (onUserUpdated != null) {
-                                  onUserUpdated!(updatedUser);
-                                }
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                      tooltip: user.doctorId == null
-                          ? 'Doktor Seç'
-                          : 'Doktor Değiştir',
+                      onPressed: _isCurrentUser()
+                          ? () {
+                              // Doktor seçme ekranını aç
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SelectDoctorScreen(
+                                    user: user,
+                                    onDoctorSelected: (updatedUser) {
+                                      // Callback ile güncellenmiş kullanıcıyı geri döndür
+                                      if (onUserUpdated != null) {
+                                        onUserUpdated!(updatedUser);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
+                            }
+                          : null, // Devre dışı bırak
+                      tooltip: _isCurrentUser()
+                          ? (user.doctorId == null
+                              ? 'Doktor Seç'
+                              : 'Doktor Değiştir')
+                          : 'Sadece kendi hesabınız için doktor seçebilirsiniz',
                       constraints: const BoxConstraints(
                         minWidth: 40,
                         minHeight: 40,
@@ -436,7 +463,9 @@ class UserListItem extends StatelessWidget {
                     // API'ye yeni randevu eklemek için istek at
                     final newAppointment = Appointment(
                       id: 0, // API tarafında otomatik atanacak
+                      patientId: user.id,
                       patientName: patientController.text,
+                      doctorId: selectedDoctor?.id ?? 0,
                       doctorName: selectedDoctor?.name ?? '',
                       date: selectedDate,
                       time: selectedTime,

@@ -7,6 +7,7 @@ class Appointment {
   final String status;
   final String type;
   final int? doctorId;
+  final int? patientId;
   final String patientEmail;
   final String notes;
 
@@ -19,6 +20,7 @@ class Appointment {
     required this.status,
     required this.type,
     this.doctorId,
+    this.patientId,
     this.patientEmail = '',
     this.notes = '',
   });
@@ -40,6 +42,9 @@ class Appointment {
       doctorId: json['doctorId'] != null
           ? int.tryParse(json['doctorId'].toString())
           : null,
+      patientId: json['patientId'] != null
+          ? int.tryParse(json['patientId'].toString())
+          : null,
       date: json['date'] != null
           ? DateTime.parse(json['date'])
           : (json['appointmentDate'] != null
@@ -58,17 +63,16 @@ class Appointment {
   }
 
   Map<String, dynamic> toJson() {
+    // Backend'in SaveAppointmentViewModel formatına uygun olarak veri gönder
     return {
-      'id': id,
+      'patientId': patientId ?? 0,
+      'doctorId': doctorId ?? 0,
       'patientName': patientName,
       'doctorName': doctorName,
-      'doctorId': doctorId,
       'date': date.toIso8601String(),
       'time': time,
       'status': status,
       'type': type,
-      'patientEmail': patientEmail,
-      'notes': notes,
     };
   }
 }

@@ -51,10 +51,13 @@ class DoctorDashboardState extends State<DoctorDashboard> {
         return;
       }
 
-      // Kullanıcı rolünü kontrol et
+      // Kullanıcı rolünü ve doktor ID'sini kontrol et
       final userRole = currentUser.role.toLowerCase();
+      final doctorId = currentUser.doctorId;
+      final isDoctorUser =
+          userRole == 'doctor' && doctorId != null && doctorId > 0;
 
-      if (userRole != 'doctor') {
+      if (!isDoctorUser) {
         // Doktor değilse, uygun sayfaya yönlendir
         if (!mounted) return;
 
