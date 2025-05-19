@@ -3,6 +3,7 @@ using FullstackWithFlutter.Core.Interfaces;
 using FullstackWithFlutter.Core.Models;
 using FullstackWithFlutter.Core.ViewModels;
 using FullstackWithFlutter.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace FullstackWithFlutter.Services
 {
@@ -10,11 +11,15 @@ namespace FullstackWithFlutter.Services
     {
         private readonly IUnitofWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IActivityService _activityService;
+        private readonly ILogger<AppointmentService> _logger;
 
-        public AppointmentService(IUnitofWork unitOfWork, IMapper mapper)
+        public AppointmentService(IUnitofWork unitOfWork, IMapper mapper, IActivityService activityService, ILogger<AppointmentService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _activityService = activityService;
+            _logger = logger;
         }
 
         public async Task<bool> CreateAppointment(SaveAppointmentViewModel appointmentViewModel)
@@ -101,6 +106,63 @@ namespace FullstackWithFlutter.Services
                 }
             }
             return false;
+        }
+
+        public async Task<bool> UpdateStatus(int appointmentId, string newStatus)
+        {
+            try
+            {
+                if (appointmentId <= 0)
+                {
+                    _logger.LogWarning("Invalid appointment ID: {AppointmentId}", appointmentId);
+                    return false;
+                }
+
+                var appointment = await _unitOfWork.Appointments.Get(appointmentId);
+                if (appointment == null)
+                {
+                    _logger.LogWarning("Appointment not found: {AppointmentId}", appointmentId);
+                    return false;
+                }
+
+                // Eski durumu kaydet
+                string oldStatus = appointment.Status ?? "Bekleyen";
+
+                // Durumu güncelle
+                appointment.Status = newStatus;
+                appointment.UpdatedDate = DateTime.Now;
+                appointment.UpdatedBy = "API";
+                _unitOfWork.Appointments.Update(appointment);
+                var result = _unitOfWork.Complete();
+
+                if (result > 0)
+                {
+                    // Aktivite kaydı oluştur
+                    string description = $"Randevu durumu '{oldStatus}' -> '{newStatus}' olarak değiştirildi";
+                    await _activityService.LogAppointmentActivity(
+                        "AppointmentStatusChange",
+                        description,
+                        null, // Kullanıcı ID'si
+                        null, // Kullanıcı adı
+                        appointmentId,
+                        $"Eski durum: {oldStatus}, Yeni durum: {newStatus}"
+                    );
+
+                    _logger.LogInformation("Appointment status updated: {AppointmentId}, {OldStatus} -> {NewStatus}",
+                        appointmentId, oldStatus, newStatus);
+                    return true;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to update appointment status: {AppointmentId}", appointmentId);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating appointment status: {AppointmentId}", appointmentId);
+                return false;
+            }
         }
     }
 }

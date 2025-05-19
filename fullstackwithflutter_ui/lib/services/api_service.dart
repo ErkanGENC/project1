@@ -2232,6 +2232,10 @@ class ApiService {
       // Token'i al
       final token = await getToken();
 
+      // Debug için gönderilen verileri yazdır
+      print(
+          'Randevu durumu güncelleme isteği: ID=$appointmentId, Yeni Durum=$newStatus');
+
       // Backend'in beklediği endpoint'i kullan
       final response = await http.put(
         Uri.parse('$baseUrl/Appointments/UpdateStatus/$appointmentId'),
@@ -2244,6 +2248,10 @@ class ApiService {
           'status': newStatus,
         }),
       );
+
+      // Debug için yanıtı yazdır
+      print(
+          'Randevu durumu güncelleme yanıtı: ${response.statusCode} - ${response.body}');
 
       // Yanıtı işle
       try {

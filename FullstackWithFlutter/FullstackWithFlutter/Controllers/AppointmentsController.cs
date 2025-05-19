@@ -1,6 +1,8 @@
 ﻿﻿using FullstackWithFlutter.Core.ViewModels;
 using FullstackWithFlutter.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FullstackWithFlutter.Controllers
 {
@@ -9,11 +11,13 @@ namespace FullstackWithFlutter.Controllers
     public class AppointmentsController : ControllerBase
     {
         private readonly IAppointmentService _appointmentService;
+        private readonly IActivityService _activityService;
         private readonly ILogger<AppointmentsController> _logger;
 
-        public AppointmentsController(IAppointmentService appointmentService, ILogger<AppointmentsController> logger)
+        public AppointmentsController(IAppointmentService appointmentService, IActivityService activityService, ILogger<AppointmentsController> logger)
         {
             _appointmentService = appointmentService;
+            _activityService = activityService;
             _logger = logger;
         }
 
@@ -216,5 +220,77 @@ namespace FullstackWithFlutter.Controllers
                 return BadRequest(resp);
             }
         }
+
+        [HttpPut("UpdateStatus/{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusViewModel model)
+        {
+            try
+            {
+                if (id != model.Id)
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "ID mismatch",
+                        Data = null
+                    });
+                }
+
+                // Kullanıcı bilgilerini al
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var userName = User.FindFirstValue(ClaimTypes.Name);
+
+                // Randevu durumunu güncelle
+                var result = await _appointmentService.UpdateStatus(id, model.Status);
+                if (result)
+                {
+                    // Aktivite kaydı oluştur
+                    await _activityService.LogAppointmentActivity(
+                        "AppointmentStatusChange",
+                        $"Randevu durumu '{model.Status}' olarak güncellendi",
+                        userId != null ? int.Parse(userId) : null,
+                        userName,
+                        id
+                    );
+
+                    return Ok(new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Randevu durumu başarıyla güncellendi",
+                        Data = null
+                    });
+                }
+                else
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Randevu durumu güncellenemedi",
+                        Data = null
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating appointment status with ID {AppointmentId}", id);
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Randevu durumu güncellenirken hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+    }
+}
+
+// Randevu durumu güncelleme için model
+namespace FullstackWithFlutter.Controllers
+{
+    public class UpdateStatusViewModel
+    {
+        public int Id { get; set; }
+        public required string Status { get; set; }
     }
 }
