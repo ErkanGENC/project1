@@ -14,6 +14,7 @@ import '../screens/admin/patients_management.dart';
 import '../screens/admin/appointments_management.dart';
 import '../screens/admin/doctors_management.dart';
 import '../screens/admin/reports_page.dart';
+import '../screens/admin/admin_settings_screen.dart';
 import '../screens/welcome_screen.dart';
 import '../screens/doctor/doctor_dashboard.dart';
 import '../screens/doctor/doctor_appointments_screen.dart';
@@ -51,6 +52,7 @@ class AppRoutes {
   static const String appointmentsManagement = '/admin/appointments';
   static const String doctorsManagement = '/admin/doctors';
   static const String reportsPage = '/admin/reports';
+  static const String adminSettings = '/admin/settings';
 
   /// Tüm rotaları içeren harita
   static Map<String, WidgetBuilder> get routes {
@@ -76,6 +78,7 @@ class AppRoutes {
       appointmentsManagement: (context) => const AppointmentsManagement(),
       doctorsManagement: (context) => const DoctorsManagement(),
       reportsPage: (context) => const ReportsPage(),
+      adminSettings: (context) => const AdminSettingsScreen(),
 
       // Doktor rotaları
       doctorDashboard: (context) => const DoctorDashboard(),

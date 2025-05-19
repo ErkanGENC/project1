@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../models/activity.dart';
 import '../../models/user_model.dart';
+import '../../routes/app_routes.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin/dashboard_card.dart';
 import '../../widgets/admin/recent_activity_card.dart';
@@ -151,18 +152,6 @@ class AdminDashboardState extends State<AdminDashboard> {
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         actions: [
-          ElevatedButton.icon(
-            icon: const Icon(Icons.home),
-            label: const Text('Kullanıcı Paneli'),
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
@@ -245,14 +234,6 @@ class AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Kullanıcı Paneli'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/');
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.dashboard),
             title: const Text('Dashboard'),
             selected: true,
@@ -318,15 +299,7 @@ class AdminDashboardState extends State<AdminDashboard> {
             title: const Text('Ayarlar'),
             onTap: () {
               Navigator.pop(context);
-              // Ayarlar sayfasına git
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.cleaning_services),
-            title: const Text('Doktor Kullanıcılarını Temizle'),
-            onTap: () {
-              Navigator.pop(context);
-              _showCleanupDoctorUsersDialog();
+              Navigator.pushNamed(context, AppRoutes.adminSettings);
             },
           ),
           ListTile(
@@ -352,109 +325,6 @@ class AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(height: 16),
         ],
       ),
-    );
-  }
-
-  // Doktor kullanıcılarını temizleme dialog'u
-  Future<void> _showCleanupDoctorUsersDialog() async {
-    bool isLoading = false;
-
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Doktor Kullanıcılarını Temizle'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    const Text(
-                      'Bu işlem, doktor kullanıcılarını appUsers tablosundan temizleyecek ve sadece doctors tablosunda tutacaktır.',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Bu işlem, doktor kullanıcılarının kimlik doğrulama ve yönlendirme sorunlarını çözmek için gereklidir.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Devam etmek istiyor musunuz?',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    if (isLoading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                  ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          Navigator.of(dialogContext).pop();
-                        },
-                  child: const Text('İptal'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          // Yükleniyor durumunu güncelle
-                          setState(() {
-                            isLoading = true;
-                          });
-
-                          try {
-                            // API isteğini yap
-                            final result =
-                                await _apiService.cleanupDoctorUsers();
-
-                            // Sonuç mesajını hazırla
-                            final String message =
-                                result['message'] ?? 'İşlem tamamlandı';
-                            final bool success = result['success'] ?? false;
-
-                            // Dialog'u kapat ve sonucu göster
-                            if (dialogContext.mounted) {
-                              _showResultAndCloseDialog(
-                                dialogContext: dialogContext,
-                                message: message,
-                                success: success,
-                              );
-                            }
-                          } catch (error) {
-                            // Yükleniyor durumunu güncelle
-                            setState(() {
-                              isLoading = false;
-                            });
-
-                            // Dialog'u kapat ve hatayı göster
-                            if (dialogContext.mounted) {
-                              _showResultAndCloseDialog(
-                                dialogContext: dialogContext,
-                                message: 'Bir hata oluştu: $error',
-                                success: false,
-                              );
-                            }
-                          }
-                        },
-                  child: const Text('Temizle'),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 

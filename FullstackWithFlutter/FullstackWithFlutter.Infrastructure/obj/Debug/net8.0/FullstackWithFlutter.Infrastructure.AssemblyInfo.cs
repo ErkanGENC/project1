@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FullstackWithFlutter.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+79eb9c1d2e5c81d2c002a3aadf3a2052340ba243")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5205aba93d9970aa77b5e542eca298ef381bfdf5")]
 [assembly: System.Reflection.AssemblyProductAttribute("FullstackWithFlutter.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FullstackWithFlutter.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
