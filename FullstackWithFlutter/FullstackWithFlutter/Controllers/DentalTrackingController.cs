@@ -276,5 +276,126 @@ namespace FullstackWithFlutter.Controllers
                 });
             }
         }
+
+        [HttpGet("doctor/{doctorId}/patients/records")]
+        [Authorize]
+        public async Task<IActionResult> GetRecordsForDoctorPatients(int doctorId)
+        {
+            try
+            {
+                var records = await _dentalTrackingService.GetRecordsForDoctorPatients(doctorId);
+                return Ok(new ApiResponse
+                {
+                    Status = true,
+                    Message = "Doctor patients' dental tracking records fetched successfully",
+                    Data = records
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching dental tracking records for doctor {doctorId}'s patients");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Error fetching doctor patients' dental tracking records: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        [HttpGet("doctor/{doctorId}/patients/summaries")]
+        [Authorize]
+        public async Task<IActionResult> GetSummariesForDoctorPatients(int doctorId)
+        {
+            try
+            {
+                var summaries = await _dentalTrackingService.GetSummariesForDoctorPatients(doctorId);
+                return Ok(new ApiResponse
+                {
+                    Status = true,
+                    Message = "Doctor patients' dental tracking summaries fetched successfully",
+                    Data = summaries
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching dental tracking summaries for doctor {doctorId}'s patients");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Error fetching doctor patients' dental tracking summaries: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        [HttpGet("doctor/{doctorId}/patients/trends")]
+        [Authorize]
+        public async Task<IActionResult> GetTrendsForDoctorPatients(int doctorId, [FromQuery] int days = 30)
+        {
+            try
+            {
+                var trends = await _dentalTrackingService.GetTrendsForDoctorPatients(doctorId, days);
+                return Ok(new ApiResponse
+                {
+                    Status = true,
+                    Message = "Doctor patients' dental tracking trends fetched successfully",
+                    Data = trends
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching dental tracking trends for doctor {doctorId}'s patients");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Error fetching doctor patients' dental tracking trends: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        [HttpPost("treatment/start")]
+        [Authorize]
+        public async Task<IActionResult> StartTreatment(SaveTreatmentViewModel treatmentViewModel)
+        {
+            try
+            {
+                var result = await _dentalTrackingService.StartTreatment(
+                    treatmentViewModel.PatientId,
+                    treatmentViewModel.DoctorId,
+                    treatmentViewModel.Type ?? "Genel Tedavi",
+                    treatmentViewModel.Notes ?? "");
+
+                if (result)
+                {
+                    return Ok(new ApiResponse
+                    {
+                        Status = true,
+                        Message = "Treatment started successfully",
+                        Data = null
+                    });
+                }
+                else
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Failed to start treatment",
+                        Data = null
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting treatment");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Error starting treatment: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
     }
 }

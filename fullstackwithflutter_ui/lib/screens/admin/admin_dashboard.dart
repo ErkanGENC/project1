@@ -10,7 +10,6 @@ import '../../widgets/admin/stats_card.dart';
 import 'patients_management.dart';
 import 'appointments_management.dart';
 import 'doctors_management.dart';
-import 'reports_page.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -285,12 +284,7 @@ class AdminDashboardState extends State<AdminDashboard> {
             title: const Text('Raporlar ve İstatistikler'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ReportsPage(),
-                ),
-              );
+              Navigator.pushNamed(context, AppRoutes.reportsPage);
             },
           ),
           const Divider(),
@@ -656,12 +650,7 @@ class AdminDashboardState extends State<AdminDashboard> {
                   icon: Icons.bar_chart,
                   color: Colors.teal,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ReportsPage(),
-                      ),
-                    );
+                    Navigator.pushNamed(context, AppRoutes.reportsPage);
                   },
                 ),
               ),

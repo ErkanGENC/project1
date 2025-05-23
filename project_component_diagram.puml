@@ -1,0 +1,155 @@
+@startuml
+
+' Stil ve renk ayarları
+skinparam componentStyle rectangle
+skinparam backgroundColor white
+skinparam component {
+  BackgroundColor #E0F2F7
+  BorderColor #2C3E50
+  FontColor #2C3E50
+}
+
+' Not ekleme
+note right of [API Service]
+  HTTP/HTTPS üzerinden 
+  RESTful API çağrıları yapar
+end note
+
+' Alternatif bağlantı stilleri
+FE_APIService ..> BE_AuthController : HTTP/JSON
+FE_Service -[#red]-> FE_APIService : kritik bağımlılık
+
+' Stereotipler ile bileşen tiplerini belirtme
+[Auth Service] <<service>>
+[User Repository] <<repository>>
+[Domain Models] <<model>>
+
+' Arayüz tanımlama
+interface "IUserRepository" as IUserRepo
+
+' Arayüz implementasyonu
+BE_UserRepo -|> IUserRepo
+BE_UserService --> IUserRepo
+
+' Gruplandırma için sınır çizme
+rectangle "Authentication Flow" {
+  FE_Auth --> FE_AuthService
+  FE_AuthService --> BE_AuthController
+}
+
+' Frontend Components
+package "Frontend (Flutter UI)" {
+  [Auth Component] as FE_Auth
+  [Home Component] as FE_Home
+  [Appointment Component] as FE_Appointment
+  [Dental Component] as FE_Dental
+  [User Component] as FE_User
+  [Doctor Component] as FE_Doctor
+  [Admin Component] as FE_Admin
+  [Service Layer] as FE_Service
+  
+  ' Frontend içi ilişkiler
+  FE_Auth --> FE_Service
+  FE_Home --> FE_Service
+  FE_Appointment --> FE_Service
+  FE_Dental --> FE_Service
+  FE_User --> FE_Service
+  FE_Doctor --> FE_Service
+  FE_Admin --> FE_Service
+  
+  ' Frontend servis katmanı detayları
+  package "Service Layer Details" {
+    [API Service] as FE_APIService
+    [Auth Service] as FE_AuthService
+    [Local Storage] as FE_LocalStorage
+    [Dental Tracking Service] as FE_DentalService
+    
+    FE_Service --> FE_APIService
+    FE_Service --> FE_AuthService
+    FE_Service --> FE_LocalStorage
+    FE_Service --> FE_DentalService
+  }
+}
+
+' Backend Components
+package "Backend (ASP.NET Core)" {
+  package "Controller Layer" {
+    [Auth Controller] as BE_AuthController
+    [User Controller] as BE_UserController
+    [Doctor Controller] as BE_DoctorController
+    [Appointment Controller] as BE_AppointmentController
+    [Dental Controller] as BE_DentalController
+    [Admin Controller] as BE_AdminController
+  }
+  
+  package "Service Layer" {
+    [Auth Service] as BE_AuthService
+    [User Service] as BE_UserService
+    [Doctor Service] as BE_DoctorService
+    [Appointment Service] as BE_AppointmentService
+    [Dental Tracking Service] as BE_DentalService
+    [Email Service] as BE_EmailService
+    [Report Service] as BE_ReportService
+  }
+  
+  package "Repository Layer" {
+    [User Repository] as BE_UserRepo
+    [Doctor Repository] as BE_DoctorRepo
+    [Appointment Repository] as BE_AppointmentRepo
+    [Dental Repository] as BE_DentalRepo
+    [Settings Repository] as BE_SettingsRepo
+  }
+  
+  package "Model Layer" {
+    [Domain Models] as BE_DomainModels
+    [View Models] as BE_ViewModels
+  }
+  
+  [Database Layer] as BE_Database
+}
+
+' Frontend ve Backend arasındaki ilişkiler
+FE_APIService ..> BE_AuthController : HTTP Requests
+FE_APIService ..> BE_UserController : HTTP Requests
+FE_APIService ..> BE_DoctorController : HTTP Requests
+FE_APIService ..> BE_AppointmentController : HTTP Requests
+FE_APIService ..> BE_DentalController : HTTP Requests
+FE_APIService ..> BE_AdminController : HTTP Requests
+
+' Backend içi ilişkiler
+BE_AuthController --> BE_AuthService
+BE_UserController --> BE_UserService
+BE_DoctorController --> BE_DoctorService
+BE_AppointmentController --> BE_AppointmentService
+BE_DentalController --> BE_DentalService
+BE_AdminController --> BE_ReportService
+
+BE_AuthService --> BE_UserRepo
+BE_UserService --> BE_UserRepo
+BE_DoctorService --> BE_DoctorRepo
+BE_AppointmentService --> BE_AppointmentRepo
+BE_DentalService --> BE_DentalRepo
+BE_UserService --> BE_SettingsRepo
+
+BE_UserRepo --> BE_DomainModels
+BE_DoctorRepo --> BE_DomainModels
+BE_AppointmentRepo --> BE_DomainModels
+BE_DentalRepo --> BE_DomainModels
+BE_SettingsRepo --> BE_DomainModels
+
+BE_UserRepo --> BE_Database
+BE_DoctorRepo --> BE_Database
+BE_AppointmentRepo --> BE_Database
+BE_DentalRepo --> BE_Database
+BE_SettingsRepo --> BE_Database
+
+' Cross-cutting concerns
+cloud "External Services" {
+  [Email Provider] as ExtEmail
+  [SMS Provider] as ExtSMS
+}
+
+BE_EmailService --> ExtEmail
+BE_AuthService --> ExtSMS
+
+@enduml 

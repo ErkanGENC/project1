@@ -4,6 +4,7 @@ using FullstackWithFlutter.Core.Models;
 using FullstackWithFlutter.Core.ViewModels;
 using FullstackWithFlutter.Services.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace FullstackWithFlutter.Services
 {
@@ -224,6 +225,198 @@ namespace FullstackWithFlutter.Services
                     FlossPercentage = 0,
                     MouthwashPercentage = 0
                 };
+            }
+        }
+
+        public async Task<Dictionary<int, List<DentalTrackingViewModel>>> GetRecordsForDoctorPatients(int doctorId)
+        {
+            try
+            {
+                // Doktorun hastalarını bul
+                var appointments = await _unitOfWork.Appointments.GetAll();
+                var doctorAppointments = appointments.Where(a => a.DoctorId == doctorId).ToList();
+
+                // Benzersiz hasta ID'lerini al
+                var patientIds = doctorAppointments.Select(a => a.PatientId).Distinct().ToList();
+
+                // Her hasta için diş sağlığı kayıtlarını al
+                var result = new Dictionary<int, List<DentalTrackingViewModel>>();
+
+                foreach (var patientId in patientIds)
+                {
+                    var records = await GetUserRecords(patientId);
+                    if (records.Any())
+                    {
+                        result.Add(patientId, records);
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting dental tracking records for doctor {doctorId}'s patients");
+                return new Dictionary<int, List<DentalTrackingViewModel>>();
+            }
+        }
+
+        public async Task<Dictionary<int, DentalTrackingSummaryViewModel>> GetSummariesForDoctorPatients(int doctorId)
+        {
+            try
+            {
+                // Doktorun hastalarını bul
+                var appointments = await _unitOfWork.Appointments.GetAll();
+                var doctorAppointments = appointments.Where(a => a.DoctorId == doctorId).ToList();
+
+                // Benzersiz hasta ID'lerini al
+                var patientIds = doctorAppointments.Select(a => a.PatientId).Distinct().ToList();
+
+                // Her hasta için özet bilgileri al
+                var result = new Dictionary<int, DentalTrackingSummaryViewModel>();
+
+                foreach (var patientId in patientIds)
+                {
+                    var summary = await GetUserSummary(patientId);
+                    result.Add(patientId, summary);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting dental tracking summaries for doctor {doctorId}'s patients");
+                return new Dictionary<int, DentalTrackingSummaryViewModel>();
+            }
+        }
+
+        public async Task<Dictionary<int, DentalTrackingTrendViewModel>> GetTrendsForDoctorPatients(int doctorId, int days)
+        {
+            try
+            {
+                // Doktorun hastalarını bul
+                var appointments = await _unitOfWork.Appointments.GetAll();
+                var doctorAppointments = appointments.Where(a => a.DoctorId == doctorId).ToList();
+
+                // Benzersiz hasta ID'lerini al
+                var patientIds = doctorAppointments.Select(a => a.PatientId).Distinct().ToList();
+
+                // Her hasta için trend bilgilerini hesapla
+                var result = new Dictionary<int, DentalTrackingTrendViewModel>();
+
+                foreach (var patientId in patientIds)
+                {
+                    // Son 'days' günün kayıtlarını al
+                    var endDate = DateTime.Now.Date;
+                    var startDate = endDate.AddDays(-days);
+                    var records = await _unitOfWork.DentalTrackings.GetUserRecordsForDateRange(patientId, startDate, endDate);
+
+                    if (!records.Any())
+                    {
+                        continue;
+                    }
+
+                    // Günlük trendleri hesapla
+                    var dailyTrends = new List<DailyTrendViewModel>();
+                    var recordsList = records.OrderBy(r => r.Date).ToList();
+
+                    foreach (var record in recordsList)
+                    {
+                        var brushingPercentage = record.BrushingCount / 2.0;
+                        var flossPercentage = record.UsedFloss ? 1.0 : 0.0;
+                        var mouthwashPercentage = record.UsedMouthwash ? 1.0 : 0.0;
+                        var overallPercentage = (brushingPercentage + flossPercentage + mouthwashPercentage) / 3.0;
+
+                        dailyTrends.Add(new DailyTrendViewModel
+                        {
+                            Date = record.Date,
+                            BrushingPercentage = brushingPercentage,
+                            FlossPercentage = flossPercentage,
+                            MouthwashPercentage = mouthwashPercentage,
+                            OverallPercentage = overallPercentage
+                        });
+                    }
+
+                    // Trend yüzdelerini hesapla (ilk yarı vs. ikinci yarı)
+                    if (dailyTrends.Count >= 2)
+                    {
+                        int midPoint = dailyTrends.Count / 2;
+                        var firstHalf = dailyTrends.Take(midPoint).ToList();
+                        var secondHalf = dailyTrends.Skip(midPoint).ToList();
+
+                        double firstHalfBrushing = firstHalf.Average(d => d.BrushingPercentage);
+                        double secondHalfBrushing = secondHalf.Average(d => d.BrushingPercentage);
+                        double brushingTrend = secondHalfBrushing - firstHalfBrushing;
+
+                        double firstHalfFloss = firstHalf.Average(d => d.FlossPercentage);
+                        double secondHalfFloss = secondHalf.Average(d => d.FlossPercentage);
+                        double flossTrend = secondHalfFloss - firstHalfFloss;
+
+                        double firstHalfMouthwash = firstHalf.Average(d => d.MouthwashPercentage);
+                        double secondHalfMouthwash = secondHalf.Average(d => d.MouthwashPercentage);
+                        double mouthwashTrend = secondHalfMouthwash - firstHalfMouthwash;
+
+                        double firstHalfOverall = firstHalf.Average(d => d.OverallPercentage);
+                        double secondHalfOverall = secondHalf.Average(d => d.OverallPercentage);
+                        double overallTrend = secondHalfOverall - firstHalfOverall;
+
+                        result.Add(patientId, new DentalTrackingTrendViewModel
+                        {
+                            DailyTrends = dailyTrends,
+                            BrushingTrendPercentage = brushingTrend,
+                            FlossTrendPercentage = flossTrend,
+                            MouthwashTrendPercentage = mouthwashTrend,
+                            OverallTrendPercentage = overallTrend
+                        });
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error calculating dental tracking trends for doctor {doctorId}'s patients");
+                return new Dictionary<int, DentalTrackingTrendViewModel>();
+            }
+        }
+
+        public async Task<bool> StartTreatment(int patientId, int doctorId, string treatmentType, string notes)
+        {
+            try
+            {
+                // Hasta ve doktor bilgilerini al
+                var patient = await _unitOfWork.AppUsers.Get(patientId);
+                var doctor = await _unitOfWork.Doctors.Get(doctorId);
+
+                if (patient == null || doctor == null)
+                {
+                    _logger.LogWarning($"Patient ID {patientId} or Doctor ID {doctorId} not found");
+                    return false;
+                }
+
+                // Yeni randevu oluştur
+                var appointment = new Appointment
+                {
+                    PatientId = patientId,
+                    DoctorId = doctorId,
+                    PatientName = patient.FullName,
+                    DoctorName = doctor.Name,
+                    Date = DateTime.Now.Date,
+                    Time = DateTime.Now.ToString("HH:mm"),
+                    Status = "Tedavi Başlatıldı",
+                    Type = treatmentType,
+                    CreatedDate = DateTime.Now,
+                    CreatedBy = "API"
+                };
+
+                await _unitOfWork.Appointments.Add(appointment);
+                var result = _unitOfWork.Complete();
+
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error starting treatment for patient {patientId} by doctor {doctorId}");
+                return false;
             }
         }
     }

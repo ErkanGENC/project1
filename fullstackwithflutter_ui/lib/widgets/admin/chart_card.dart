@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'dart:math' as math;
 
 class ChartCard extends StatelessWidget {
   final String title;
@@ -51,111 +53,220 @@ class ChartCard extends StatelessWidget {
   }
 
   Widget _buildBarChart() {
-    // Gerçek uygulamada, burada fl_chart veya charts_flutter gibi bir kütüphane kullanabilirsiniz
-    // Şimdilik basit bir görselleştirme yapıyoruz
+    // fl_chart kütüphanesini kullanarak bar chart oluştur
 
-    // Y eksenindeki maksimum değeri bul
-    final double maxValue = data
-        .map<double>((item) => (item[yKey] as num).toDouble())
-        .reduce((a, b) => a > b ? a : b);
+    // Veri noktalarını hazırla
+    final List<BarChartGroupData> barGroups = [];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: data.map((item) {
-              final double value = (item[yKey] as num).toDouble();
-              final double percentage = value / maxValue;
+    // Renk tonları oluştur
+    final List<Color> barColors = List.generate(
+      data.length,
+      (index) => HSLColor.fromColor(color)
+          .withLightness(0.3 + (0.4 * index / data.length))
+          .toColor(),
+    );
 
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        isCurrency
-                            ? '${value.toInt()} ₺'
-                            : value.toInt().toString(),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+    // Bar gruplarını oluştur
+    for (int i = 0; i < data.length; i++) {
+      final item = data[i];
+      final double value = (item[yKey] as num).toDouble();
+
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: value,
+              color: barColors[i % barColors.length],
+              width: 16,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, right: 16, bottom: 24),
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: data.isEmpty
+              ? 10.0
+              : data
+                      .map<double>((item) => (item[yKey] as num).toDouble())
+                      .reduce((double a, double b) => a > b ? a : b) *
+                  1.2,
+          titlesData: FlTitlesData(
+            show: true,
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  if (value < 0 || value >= data.length) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final String title = data[value.toInt()][xKey] as String;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        height: 150 * percentage,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ],
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                },
+                reservedSize: 30,
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  String text = value.toInt().toString();
+                  if (isCurrency) {
+                    text = '$text ₺';
+                  }
+
+                  return Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.right,
+                  );
+                },
+                reservedSize: 40,
+              ),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+          ),
+          gridData: const FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 1,
+          ),
+          borderData: FlBorderData(
+            show: false,
+          ),
+          barGroups: barGroups,
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchTooltipData: BarTouchTooltipData(
+              tooltipPadding: const EdgeInsets.all(8),
+              tooltipMargin: 8,
+              
+              getTooltipItem: (BarChartGroupData group, int groupIndex,
+                  BarChartRodData rod, int rodIndex) {
+                final value = rod.toY;
+                return BarTooltipItem(
+                  isCurrency
+                      ? '${value.toStringAsFixed(0)} ₺'
+                      : value.toStringAsFixed(0),
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              },
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: data.map((item) {
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  item[xKey] as String,
-                  style: const TextStyle(
-                    fontSize: 10,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildPieChart() {
-    // Gerçek uygulamada, burada fl_chart veya charts_flutter gibi bir kütüphane kullanabilirsiniz
-    // Şimdilik basit bir görselleştirme yapıyoruz
+    // fl_chart kütüphanesini kullanarak pie chart oluştur
 
     // Toplam değeri hesapla
-    final double total = data
-        .map<double>((item) => (item[yKey] as num).toDouble())
-        .reduce((a, b) => a + b);
+    final double total = data.isEmpty
+        ? 0.0
+        : data
+            .map<double>((item) => (item[yKey] as num).toDouble())
+            .reduce((double a, double b) => a + b);
 
-    // Renk listesi
-    final List<Color> colors = [
-      color,
-      color.withAlpha(204), // ~0.8
-      color.withAlpha(153), // ~0.6
-      color.withAlpha(102), // ~0.4
-      color.withAlpha(51), // ~0.2
-      Colors.grey,
-    ];
+    // Renk listesi oluştur
+    final List<Color> colors = List.generate(
+      data.length,
+      (index) => HSLColor.fromColor(color)
+          .withHue((HSLColor.fromColor(color).hue + (index * 30) % 360))
+          .withLightness(0.4 + (0.1 * index % 4))
+          .toColor(),
+    );
+
+    // Pie chart sektörlerini oluştur
+    final List<PieChartSectionData> sections = [];
+
+    if (data.isEmpty || total <= 0) {
+      // Veri yoksa veya toplam sıfırsa boş bir daire göster
+      sections.add(
+        PieChartSectionData(
+          color: Colors.grey.shade300,
+          value: 100,
+          title: 'Veri Yok',
+          radius: 80,
+          titleStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
+          ),
+        ),
+      );
+    } else {
+      for (int i = 0; i < data.length; i++) {
+        final item = data[i];
+        final double value = (item[yKey] as num).toDouble();
+        final double percentage = (value / total) * 100;
+
+        sections.add(
+          PieChartSectionData(
+            color: colors[i % colors.length],
+            value: value,
+            title: '${percentage.toStringAsFixed(1)}%',
+            radius: 80,
+            titleStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        );
+      }
+    }
 
     return Row(
       children: [
-        // Pasta grafiği (basit bir temsil)
+        // Pie chart
         Expanded(
           flex: 2,
-          child: Container(
-            height: 200,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: SweepGradient(
-                colors: colors.take(data.length).toList(),
-                stops: List.generate(data.length, (index) {
-                  final double value = (data[index][yKey] as num).toDouble();
-                  return value / total;
-                }),
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              centerSpaceRadius: 0,
+              sectionsSpace: 2,
+              pieTouchData: PieTouchData(
+                enabled: true,
+                touchCallback:
+                    (FlTouchEvent event, PieTouchResponse? pieTouchResponse) {
+                  // Dokunma işlemleri için gerekirse burada kod eklenebilir
+                },
               ),
             ),
           ),
@@ -167,49 +278,62 @@ class ChartCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(data.length, (index) {
-              final item = data[index];
-              final double value = (item[yKey] as num).toDouble();
-              final double percentage = (value / total) * 100;
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color:
-                            index < colors.length ? colors[index] : Colors.grey,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
+            children: data.isEmpty || total <= 0
+                ? [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
                       child: Text(
-                        item[xKey] as String,
-                        style: const TextStyle(
+                        'Veri bulunamadı',
+                        style: TextStyle(
                           fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isCurrency
-                          ? '${value.toInt()} ₺ (${percentage.toStringAsFixed(1)}%)'
-                          : '${value.toInt()} (${percentage.toStringAsFixed(1)}%)',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    )
+                  ]
+                : List.generate(data.length, (index) {
+                    final item = data[index];
+                    final double value = (item[yKey] as num).toDouble();
+                    final double percentage = (value / total) * 100;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: colors[index % colors.length],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item[xKey] as String,
+                              style: const TextStyle(
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isCurrency
+                                ? '${value.toInt()} ₺ (${percentage.toStringAsFixed(1)}%)'
+                                : '${value.toInt()} (${percentage.toStringAsFixed(1)}%)',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+                    );
+                  }),
           ),
         ),
       ],

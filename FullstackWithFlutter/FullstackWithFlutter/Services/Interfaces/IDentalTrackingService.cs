@@ -12,5 +12,11 @@ namespace FullstackWithFlutter.Services.Interfaces
         Task<bool> UpdateRecord(int id, SaveDentalTrackingViewModel recordViewModel);
         Task<bool> DeleteRecord(int id);
         Task<DentalTrackingSummaryViewModel> GetUserSummary(int userId);
+
+        // Doktor istatistikleri için yeni metotlar
+        Task<Dictionary<int, List<DentalTrackingViewModel>>> GetRecordsForDoctorPatients(int doctorId);
+        Task<Dictionary<int, DentalTrackingSummaryViewModel>> GetSummariesForDoctorPatients(int doctorId);
+        Task<Dictionary<int, DentalTrackingTrendViewModel>> GetTrendsForDoctorPatients(int doctorId, int days);
+        Task<bool> StartTreatment(int patientId, int doctorId, string treatmentType, string notes);
     }
 }

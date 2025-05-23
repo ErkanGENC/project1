@@ -8,6 +8,7 @@ import '../models/activity.dart';
 import '../models/user_settings_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:intl/intl.dart';
 
 class ApiService {
   // Android emülatörü için 10.0.2.2 kullanılır (localhost yerine)
@@ -2885,22 +2886,231 @@ class ApiService {
 
   // ==================== RAPOR İŞLEMLERİ ====================
 
-  // Rapor verilerini getir
-  Future<Map<String, dynamic>> getReportData() async {
+  // Doktor istatistikleri için metotlar
+  Future<Map<int, List<dynamic>>> getDentalRecords(int doctorId) async {
     try {
+      // Token'i al
+      final token = await getToken();
+
       final response = await http.get(
-        Uri.parse('$baseUrl/Reports/GetReportData'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/DentalTracking/doctor/$doctorId/patients/records'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
         final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
-        return decodedData;
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+          if (data is Map) {
+            Map<int, List<dynamic>> result = {};
+            data.forEach((key, value) {
+              if (value is List) {
+                result[int.parse(key)] = value;
+              }
+            });
+            return result;
+          }
+        }
+        return {};
       } else {
+        print(
+            'Error getting dental records for doctor: ${response.statusCode} - ${response.body}');
+        return {};
+      }
+    } catch (e) {
+      print('Error getting dental records for doctor: $e');
+      return {};
+    }
+  }
+
+  Future<Map<int, Map<String, dynamic>>> getDentalSummaries(
+      int doctorId) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      final response = await http.get(
+        Uri.parse(
+            '$baseUrl/DentalTracking/doctor/$doctorId/patients/summaries'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+          if (data is Map) {
+            Map<int, Map<String, dynamic>> result = {};
+            data.forEach((key, value) {
+              if (value is Map) {
+                result[int.parse(key)] = Map<String, dynamic>.from(value);
+              }
+            });
+            return result;
+          }
+        }
+        return {};
+      } else {
+        print(
+            'Error getting dental summaries for doctor: ${response.statusCode} - ${response.body}');
+        return {};
+      }
+    } catch (e) {
+      print('Error getting dental summaries for doctor: $e');
+      return {};
+    }
+  }
+
+  Future<Map<int, Map<String, dynamic>>> getDentalTrends(
+      int doctorId, int days) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      final response = await http.get(
+        Uri.parse(
+            '$baseUrl/DentalTracking/doctor/$doctorId/patients/trends?days=$days'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('data')) {
+          final dynamic data = decodedData['data'];
+          if (data is Map) {
+            Map<int, Map<String, dynamic>> result = {};
+            data.forEach((key, value) {
+              if (value is Map) {
+                result[int.parse(key)] = Map<String, dynamic>.from(value);
+              }
+            });
+            return result;
+          }
+        }
+        return {};
+      } else {
+        print(
+            'Error getting dental trends for doctor: ${response.statusCode} - ${response.body}');
+        return {};
+      }
+    } catch (e) {
+      print('Error getting dental trends for doctor: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> startTreatment(
+      int patientId, int doctorId, String treatmentType, String notes) async {
+    try {
+      // Token'i al
+      final token = await getToken();
+
+      final requestBody = {
+        'patientId': patientId,
+        'doctorId': doctorId,
+        'type': treatmentType,
+        'notes': notes,
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/DentalTracking/treatment/start'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map && decodedData.containsKey('status')) {
+          return {
+            'success': decodedData['status'] == true,
+            'message': decodedData['message'] ?? 'İşlem tamamlandı',
+            'data': decodedData['data'],
+          };
+        }
+        return {
+          'success': true,
+          'message': 'Tedavi başarıyla başlatıldı',
+          'data': null,
+        };
+      } else {
+        print(
+            'Error starting treatment: ${response.statusCode} - ${response.body}');
+        return {
+          'success': false,
+          'message':
+              'Tedavi başlatılırken bir hata oluştu: HTTP ${response.statusCode}',
+          'data': null,
+        };
+      }
+    } catch (e) {
+      print('Error starting treatment: $e');
+      return {
+        'success': false,
+        'message': 'API bağlantı hatası: $e',
+        'data': null,
+      };
+    }
+  }
+
+  // Rapor verilerini getir
+  Future<Map<String, dynamic>> getReportData() async {
+    try {
+      // Token'i al (eğer varsa)
+      final token = await getToken();
+
+      print('Rapor verileri alınıyor...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/Reports/GetReportData'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Rapor API yanıtı: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // API yanıt formatını kontrol et
+        if (decodedData is Map &&
+            decodedData.containsKey('data') &&
+            decodedData['status'] == true) {
+          // Yeni API formatı: { status: true, message: "...", data: { ... } }
+          return decodedData['data'];
+        } else {
+          // Eski format veya doğrudan veri
+          return decodedData;
+        }
+      } else {
+        print('Rapor API hatası: ${response.statusCode} - ${response.body}');
         throw Exception('Hata: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      // Gerçek API bağlantısı olmadığı için örnek veriler dönelim
+      print('Rapor verileri alınırken hata oluştu: $e');
+
+      // Hata durumunda örnek veriler dönelim
       return {
         'patientStats': {
           'totalPatients': 256,
@@ -2942,7 +3152,7 @@ class ApiService {
         },
         'revenueStats': {
           'totalRevenue': 45750,
-          'averageRevenuePerPatient': 178.7,
+          'pendingPayments': 12500,
           'revenueByMonth': [
             {'month': 'Ocak', 'amount': 6250},
             {'month': 'Şubat', 'amount': 5800},

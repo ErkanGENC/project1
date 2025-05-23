@@ -4,9 +4,28 @@ namespace FullstackWithFlutter.Core.ViewModels
 {
     public class ReportViewModel
     {
-        public PatientStatsViewModel PatientStats { get; set; }
-        public AppointmentStatsViewModel AppointmentStats { get; set; }
-        public RevenueStatsViewModel RevenueStats { get; set; }
+        public PatientStatsViewModel? PatientStats { get; set; }
+        public AppointmentStatsViewModel? AppointmentStats { get; set; }
+        public RevenueStatsViewModel? RevenueStats { get; set; }
+        public DoctorPatientStatsViewModel? DoctorPatientStats { get; set; }
+    }
+
+    public class DoctorPatientStatsViewModel
+    {
+        public List<DoctorPatientDistributionViewModel>? DoctorPatientDistribution { get; set; }
+        public List<DoctorAppointmentDistributionViewModel>? DoctorAppointmentDistribution { get; set; }
+    }
+
+    public class DoctorPatientDistributionViewModel
+    {
+        public string? Doctor { get; set; }
+        public int Patients { get; set; }
+    }
+
+    public class DoctorAppointmentDistributionViewModel
+    {
+        public string? Doctor { get; set; }
+        public int Appointments { get; set; }
     }
 
     public class PatientStatsViewModel
@@ -15,19 +34,19 @@ namespace FullstackWithFlutter.Core.ViewModels
         public int NewPatients { get; set; }
         public int ActivePatients { get; set; }
         public int InactivePatients { get; set; }
-        public List<AgeGroupViewModel> PatientsByAge { get; set; }
-        public List<GenderViewModel> PatientsByGender { get; set; }
+        public List<AgeGroupViewModel>? PatientsByAge { get; set; }
+        public List<GenderViewModel>? PatientsByGender { get; set; }
     }
 
     public class AgeGroupViewModel
     {
-        public string Age { get; set; }
+        public string? Age { get; set; }
         public int Count { get; set; }
     }
 
     public class GenderViewModel
     {
-        public string Gender { get; set; }
+        public string? Gender { get; set; }
         public int Count { get; set; }
     }
 
@@ -37,19 +56,19 @@ namespace FullstackWithFlutter.Core.ViewModels
         public int CompletedAppointments { get; set; }
         public int CancelledAppointments { get; set; }
         public int PendingAppointments { get; set; }
-        public List<MonthlyAppointmentViewModel> AppointmentsByMonth { get; set; }
-        public List<AppointmentTypeViewModel> AppointmentsByType { get; set; }
+        public List<MonthlyAppointmentViewModel>? AppointmentsByMonth { get; set; }
+        public List<AppointmentTypeViewModel>? AppointmentsByType { get; set; }
     }
 
     public class MonthlyAppointmentViewModel
     {
-        public string Month { get; set; }
+        public string? Month { get; set; }
         public int Count { get; set; }
     }
 
     public class AppointmentTypeViewModel
     {
-        public string Type { get; set; }
+        public string? Type { get; set; }
         public int Count { get; set; }
     }
 
@@ -57,19 +76,19 @@ namespace FullstackWithFlutter.Core.ViewModels
     {
         public decimal TotalRevenue { get; set; }
         public decimal PendingPayments { get; set; }
-        public List<MonthlyRevenueViewModel> RevenueByMonth { get; set; }
-        public List<ServiceRevenueViewModel> RevenueByService { get; set; }
+        public List<MonthlyRevenueViewModel>? RevenueByMonth { get; set; }
+        public List<ServiceRevenueViewModel>? RevenueByService { get; set; }
     }
 
     public class MonthlyRevenueViewModel
     {
-        public string Month { get; set; }
+        public string? Month { get; set; }
         public decimal Amount { get; set; }
     }
 
     public class ServiceRevenueViewModel
     {
-        public string Service { get; set; }
+        public string? Service { get; set; }
         public decimal Amount { get; set; }
     }
 }

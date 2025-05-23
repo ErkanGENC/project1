@@ -284,6 +284,14 @@ class DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
               Navigator.pushNamed(context, AppRoutes.doctorPatients);
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.bar_chart),
+            title: const Text('İstatistikler'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.doctorStatistics);
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.settings),

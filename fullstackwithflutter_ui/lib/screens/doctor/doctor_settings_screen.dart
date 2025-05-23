@@ -132,7 +132,8 @@ class DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
             title: const Text('Dashboard'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, AppRoutes.doctorDashboard);
+              Navigator.pushReplacementNamed(
+                  context, AppRoutes.doctorDashboard);
             },
           ),
           ListTile(
@@ -149,6 +150,14 @@ class DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, AppRoutes.doctorPatients);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bar_chart),
+            title: const Text('İstatistikler'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.doctorStatistics);
             },
           ),
           const Divider(),
