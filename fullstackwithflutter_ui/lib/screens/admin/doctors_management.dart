@@ -32,7 +32,6 @@ class DoctorsManagementState extends State<DoctorsManagement> {
     });
 
     try {
-      // API'den doktorları al
       final doctors = await _apiService.getAllDoctors();
 
       setState(() {
@@ -165,9 +164,8 @@ class DoctorsManagementState extends State<DoctorsManagement> {
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  // API'ye yeni doktor eklemek için istek at
                   final newDoctor = Doctor(
-                    id: 0, // API tarafında otomatik atanacak
+                    id: 0,
                     name: nameController.text,
                     specialization: specializationController.text,
                     email: emailController.text,
@@ -519,18 +517,7 @@ class DoctorsManagementState extends State<DoctorsManagement> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Yeni Doktor Ekle butonu
-                ElevatedButton.icon(
-                  onPressed: _showAddDoctorDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Yeni Doktor'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                ),
                 const SizedBox(width: 16),
-                // Doktor Kullanıcısı Oluştur butonu
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
@@ -538,8 +525,7 @@ class DoctorsManagementState extends State<DoctorsManagement> {
                       MaterialPageRoute(
                         builder: (context) => const CreateDoctorUserScreen(),
                       ),
-                    ).then((_) =>
-                        _fetchDoctors()); // Geri dönüldüğünde listeyi yenile
+                    ).then((_) => _fetchDoctors());
                   },
                   icon: const Icon(Icons.person_add),
                   label: const Text('Doktor Kullanıcısı Oluştur'),
@@ -554,7 +540,6 @@ class DoctorsManagementState extends State<DoctorsManagement> {
             ),
           ),
 
-          // Doktor listesi
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())

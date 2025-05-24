@@ -14,13 +14,13 @@ class AdminSettingsScreen extends StatefulWidget {
 class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   bool _isLoading = false;
   
-  // Bildirim ayarları
+  
   bool _newAppointmentNotifications = true;
   bool _appointmentChangeNotifications = true;
   bool _newUserNotifications = true;
   bool _systemNotifications = true;
   
-  // Font boyutu seçenekleri
+  
   final List<Map<String, dynamic>> _fontSizeOptions = [
     {'label': 'Küçük', 'value': 0.8},
     {'label': 'Normal', 'value': 1.0},
@@ -28,7 +28,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     {'label': 'Çok Büyük', 'value': 1.4},
   ];
 
-  // Font ailesi seçenekleri
+  
   final List<Map<String, dynamic>> _fontFamilyOptions = [
     {'label': 'Varsayılan', 'value': 'Default'},
     {'label': 'Roboto', 'value': 'Roboto'},
@@ -36,7 +36,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     {'label': 'Montserrat', 'value': 'Montserrat'},
   ];
 
-  // Dil seçenekleri
+  
   final List<Map<String, dynamic>> _languageOptions = [
     {'label': 'Türkçe', 'value': 'tr'},
     {'label': 'English', 'value': 'en'},
@@ -48,7 +48,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     _loadNotificationSettings();
   }
   
-  // Bildirim ayarlarını yükle
+  
   Future<void> _loadNotificationSettings() async {
     setState(() {
       _isLoading = true;
@@ -80,7 +80,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     }
   }
   
-  // Bildirim ayarlarını kaydet
+  
   Future<void> _saveNotificationSettings() async {
     setState(() {
       _isLoading = true;
@@ -124,7 +124,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ThemeService'e erişim
+    
     final themeService = Provider.of<ThemeService>(context);
 
     return Scaffold(
@@ -140,27 +140,27 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tema Ayarları
+                  
                   _buildSectionTitle('Tema Ayarları'),
                   _buildThemeSettings(themeService),
                   const Divider(height: 32),
 
-                  // Font Ayarları
+                  
                   _buildSectionTitle('Font Ayarları'),
                   _buildFontSettings(themeService),
                   const Divider(height: 32),
 
-                  // Dil Ayarları
+                  
                   _buildSectionTitle('Dil Ayarları'),
                   _buildLanguageSettings(themeService),
                   const Divider(height: 32),
                   
-                  // Bildirim Ayarları
+                  
                   _buildSectionTitle('Bildirim Ayarları'),
                   _buildNotificationSettings(),
                   const Divider(height: 32),
                   
-                  // Kaydet butonu
+                  
                   Center(
                     child: ElevatedButton.icon(
                       onPressed: _saveNotificationSettings,
@@ -179,7 +179,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 
-  // Bölüm başlığı
+  
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -194,7 +194,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 
-  // Tema ayarları bölümü
+  
   Widget _buildThemeSettings(ThemeService themeService) {
     return Card(
       elevation: 2,
@@ -233,7 +233,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 
-  // Font ayarları bölümü
+  
   Widget _buildFontSettings(ThemeService themeService) {
     return Card(
       elevation: 2,
@@ -245,7 +245,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Font Boyutu
+            
             const Text(
               'Font Boyutu',
               style: TextStyle(
@@ -275,7 +275,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             ),
             const SizedBox(height: 16),
             
-            // Font Ailesi
+            
             const Text(
               'Font Ailesi',
               style: TextStyle(
@@ -309,7 +309,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 
-  // Dil ayarları bölümü
+  
   Widget _buildLanguageSettings(ThemeService themeService) {
     return Card(
       elevation: 2,
@@ -354,7 +354,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
   
-  // Bildirim ayarları bölümü
+  
   Widget _buildNotificationSettings() {
     return Card(
       elevation: 2,
@@ -375,7 +375,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             ),
             const SizedBox(height: 8),
             
-            // Yeni randevu bildirimleri
+            
             SwitchListTile(
               title: const Text('Yeni Randevu Bildirimleri'),
               subtitle: const Text('Yeni bir randevu oluşturulduğunda bildirim al'),
@@ -388,7 +388,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               secondary: const Icon(Icons.calendar_today),
             ),
             
-            // Randevu değişiklik bildirimleri
+            
             SwitchListTile(
               title: const Text('Randevu Değişiklik Bildirimleri'),
               subtitle: const Text('Randevu durumu değiştiğinde bildirim al'),
@@ -401,7 +401,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               secondary: const Icon(Icons.update),
             ),
             
-            // Yeni kullanıcı bildirimleri
+            
             SwitchListTile(
               title: const Text('Yeni Kullanıcı Bildirimleri'),
               subtitle: const Text('Yeni bir kullanıcı kaydolduğunda bildirim al'),
@@ -414,7 +414,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               secondary: const Icon(Icons.person_add),
             ),
             
-            // Sistem bildirimleri
+            
             SwitchListTile(
               title: const Text('Sistem Bildirimleri'),
               subtitle: const Text('Sistem güncellemeleri ve önemli bilgiler için bildirim al'),

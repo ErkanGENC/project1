@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math' as math;
 
 class ChartCard extends StatelessWidget {
   final String title;
@@ -171,7 +170,6 @@ class ChartCard extends StatelessWidget {
             touchTooltipData: BarTouchTooltipData(
               tooltipPadding: const EdgeInsets.all(8),
               tooltipMargin: 8,
-              
               getTooltipItem: (BarChartGroupData group, int groupIndex,
                   BarChartRodData rod, int rodIndex) {
                 final value = rod.toY;

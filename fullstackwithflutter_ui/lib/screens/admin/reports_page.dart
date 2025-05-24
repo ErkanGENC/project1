@@ -46,15 +46,15 @@ class ReportsPageState extends State<ReportsPage>
     });
 
     try {
-      // API'den rapor verilerini al
+      
       final reportData = await _apiService.getReportData();
 
-      // Veri kontrolü yap
+      
       if (reportData.isEmpty) {
         throw Exception('Rapor verileri alınamadı');
       }
 
-      // Eksik veri alanlarını kontrol et ve varsayılan değerler ata
+      
       if (!reportData.containsKey('patientStats')) {
         reportData['patientStats'] = {
           'totalPatients': 0,
@@ -86,7 +86,7 @@ class ReportsPageState extends State<ReportsPage>
         };
       }
 
-      // Veri yapısını kontrol et ve gerekirse düzelt
+      
       _ensureDataStructure(reportData);
 
       setState(() {
@@ -101,9 +101,9 @@ class ReportsPageState extends State<ReportsPage>
     }
   }
 
-  // Veri yapısını kontrol et ve gerekirse düzelt
+  
   void _ensureDataStructure(Map<String, dynamic> data) {
-    // patientStats kontrolü
+    
     final patientStats = data['patientStats'];
     if (patientStats['patientsByAge'] == null ||
         patientStats['patientsByAge'].isEmpty) {
@@ -124,7 +124,7 @@ class ReportsPageState extends State<ReportsPage>
       ];
     }
 
-    // appointmentStats kontrolü
+    
     final appointmentStats = data['appointmentStats'];
     if (appointmentStats['appointmentsByMonth'] == null ||
         appointmentStats['appointmentsByMonth'].isEmpty) {
@@ -149,7 +149,7 @@ class ReportsPageState extends State<ReportsPage>
       ];
     }
 
-    // revenueStats kontrolü
+    
     final revenueStats = data['revenueStats'];
     if (revenueStats['revenueByMonth'] == null ||
         revenueStats['revenueByMonth'].isEmpty) {
@@ -174,7 +174,7 @@ class ReportsPageState extends State<ReportsPage>
       ];
     }
 
-    // Doktor-hasta ilişkileri için veri yapısı
+    
     if (!data.containsKey('doctorPatientStats')) {
       data['doctorPatientStats'] = {
         'doctorPatientDistribution': [
@@ -275,7 +275,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 24),
 
-          // Özet kartları
+          
           Row(
             children: [
               Expanded(
@@ -332,7 +332,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 16),
 
-          // Hasta dağılımı grafiği
+          
           ChartCard(
             title: 'Yaş Gruplarına Göre Hastalar',
             data: _reportData['patientStats']['patientsByAge'],
@@ -351,7 +351,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 16),
 
-          // Randevu dağılımı grafiği
+          
           ChartCard(
             title: 'Aylara Göre Randevular',
             data: _reportData['appointmentStats']['appointmentsByMonth'],
@@ -370,7 +370,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 16),
 
-          // Gelir dağılımı grafiği
+          
           ChartCard(
             title: 'Aylara Göre Gelir',
             data: _reportData['revenueStats']['revenueByMonth'],
@@ -399,7 +399,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 24),
 
-          // Özet kartları
+          
           Row(
             children: [
               Expanded(
@@ -457,7 +457,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 16),
 
-          // Yaş gruplarına göre hasta dağılımı
+          
           ChartCard(
             title: 'Yaş Gruplarına Göre Hastalar',
             data: _reportData['patientStats']['patientsByAge'],
@@ -468,7 +468,7 @@ class ReportsPageState extends State<ReportsPage>
 
           const SizedBox(height: 24),
 
-          // Cinsiyete göre hasta dağılımı
+          
           ChartCard(
             title: 'Cinsiyete Göre Hastalar',
             data: _reportData['patientStats']['patientsByGender'],
@@ -497,7 +497,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 24),
 
-          // Özet kartları
+          
           Row(
             children: [
               Expanded(
@@ -558,7 +558,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 16),
 
-          // Aylara göre randevu dağılımı
+          
           ChartCard(
             title: 'Aylara Göre Randevular',
             data: _reportData['appointmentStats']['appointmentsByMonth'],
@@ -569,7 +569,7 @@ class ReportsPageState extends State<ReportsPage>
 
           const SizedBox(height: 24),
 
-          // Türlere göre randevu dağılımı
+          
           ChartCard(
             title: 'Türlere Göre Randevular',
             data: _reportData['appointmentStats']['appointmentsByType'],
@@ -598,7 +598,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 24),
 
-          // Doktor başına hasta dağılımı
+          
           ChartCard(
             title: 'Doktor Başına Hasta Dağılımı',
             data: _reportData['doctorPatientStats']
@@ -610,7 +610,7 @@ class ReportsPageState extends State<ReportsPage>
 
           const SizedBox(height: 24),
 
-          // Doktor başına randevu dağılımı
+          
           ChartCard(
             title: 'Doktor Başına Randevu Dağılımı',
             data: _reportData['doctorPatientStats']
@@ -622,7 +622,7 @@ class ReportsPageState extends State<ReportsPage>
 
           const SizedBox(height: 24),
 
-          // Doktor-hasta ilişkileri açıklaması
+          
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(
@@ -680,7 +680,7 @@ class ReportsPageState extends State<ReportsPage>
     );
   }
 
-  // En yüksek hasta sayısını bul
+  
   int _getMaxPatientCount() {
     final doctorPatientDistribution =
         _reportData['doctorPatientStats']['doctorPatientDistribution'];
@@ -694,7 +694,7 @@ class ReportsPageState extends State<ReportsPage>
         .reduce((a, b) => a > b ? a : b);
   }
 
-  // En yüksek randevu sayısını bul
+  
   int _getMaxAppointmentCount() {
     final doctorAppointmentDistribution =
         _reportData['doctorPatientStats']['doctorAppointmentDistribution'];
@@ -708,7 +708,7 @@ class ReportsPageState extends State<ReportsPage>
         .reduce((a, b) => a > b ? a : b);
   }
 
-  // Bilgi kartı
+  
   Widget _buildInfoCard({
     required String title,
     required String value,
@@ -771,7 +771,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 24),
 
-          // Özet kartları
+          
           Row(
             children: [
               Expanded(
@@ -804,7 +804,7 @@ class ReportsPageState extends State<ReportsPage>
           ),
           const SizedBox(height: 16),
 
-          // Aylara göre gelir dağılımı
+          
           ChartCard(
             title: 'Aylara Göre Gelir',
             data: _reportData['revenueStats']['revenueByMonth'],
@@ -816,7 +816,7 @@ class ReportsPageState extends State<ReportsPage>
 
           const SizedBox(height: 24),
 
-          // Hizmetlere göre gelir dağılımı
+          
           ChartCard(
             title: 'Hizmetlere Göre Gelir',
             data: _reportData['revenueStats']['revenueByService'],

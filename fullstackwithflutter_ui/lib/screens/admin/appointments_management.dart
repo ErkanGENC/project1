@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../models/appointment_model.dart';
-import '../../models/doctor_model.dart';
 
 class AppointmentsManagement extends StatefulWidget {
   const AppointmentsManagement({super.key});
@@ -60,7 +58,7 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
     });
 
     try {
-      // API'den randevuları al
+      
       final appointments = await _apiService.getAllAppointments();
 
       setState(() {
@@ -84,11 +82,11 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
       }
 
       _filteredAppointments = _appointments.where((appointment) {
-        // Durum filtreleme
+        
         final bool statusMatch =
             _selectedStatus == 'Tümü' || appointment.status == _selectedStatus;
 
-        // Arama filtreleme
+        
         final bool searchMatch = _searchQuery.isEmpty ||
             appointment.patientName
                 .toLowerCase()
@@ -237,9 +235,9 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                // API'ye yeni randevu eklemek için istek at
+                
                 final newAppointment = Appointment(
-                  id: 0, // API tarafında otomatik atanacak
+                  id: 0, 
                   patientId: patientId,
                   doctorId: doctorId,
                   patientName: patientController.text,
@@ -250,7 +248,7 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                   type: typeController.text,
                 );
 
-                // Yükleniyor göstergesi
+                
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -259,19 +257,19 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                 );
 
                 try {
-                  // API'ye istek at
+                  
                   final result =
                       await _apiService.addAppointment(newAppointment);
 
-                  // Mounted kontrolü
+                  
                   if (!mounted) return;
 
-                  // Yükleniyor göstergesini kapat
+                  
                   Navigator.pop(context);
-                  Navigator.pop(context); // Dialog'u kapat
+                  Navigator.pop(context); 
 
                   if (result['success']) {
-                    // Başarılı ise randevuları yeniden yükle
+                    
                     _fetchAppointments();
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -281,7 +279,7 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                       ),
                     );
                   } else {
-                    // Hata durumunda
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(result['message']),
@@ -290,10 +288,10 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                     );
                   }
                 } catch (e) {
-                  // Hata durumunda
+                  
                   if (!mounted) return;
 
-                  // Yükleniyor göstergesini kapat
+                  
                   Navigator.pop(context);
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -338,8 +336,8 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
           if (appointment.status == 'Bekleyen')
             ElevatedButton(
               onPressed: () {
-                // Gerçek uygulamada, burada API'ye randevu onaylamak için istek atılır
-                // Şimdilik sadece listeyi güncelliyoruz
+                
+                
                 final index =
                     _appointments.indexWhere((a) => a.id == appointment.id);
                 if (index != -1) {
@@ -376,8 +374,8 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
               appointment.status != 'Tamamlandı')
             ElevatedButton(
               onPressed: () {
-                // Gerçek uygulamada, burada API'ye randevu iptal etmek için istek atılır
-                // Şimdilik sadece listeyi güncelliyoruz
+                
+                
                 final index =
                     _appointments.indexWhere((a) => a.id == appointment.id);
                 if (index != -1) {
@@ -459,7 +457,7 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
       ),
       body: Column(
         children: [
-          // Arama ve filtre çubuğu
+          
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -493,7 +491,7 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
             ),
           ),
 
-          // Randevu listesi
+          
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -564,7 +562,7 @@ class AppointmentsManagementState extends State<AppointmentsManagement>
                                         decoration: BoxDecoration(
                                           color: _getStatusColor(
                                                   appointment.status)
-                                              .withOpacity(0.1),
+                                              .withValues(alpha: 0.1),
                                           borderRadius:
                                               BorderRadius.circular(12),
                                         ),

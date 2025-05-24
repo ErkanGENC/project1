@@ -33,7 +33,7 @@ class PatientsManagementState extends State<PatientsManagement> {
     try {
       final allUsers = await _apiService.getAllUsers();
 
-      // Sadece normal kullanıcıları (hastaları) filtrele
+      
       final patients = allUsers
           .where((user) => user.role != 'doctor' && user.role != 'admin')
           .toList();
@@ -137,7 +137,7 @@ class PatientsManagementState extends State<PatientsManagement> {
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                // Yükleniyor göstergesi
+                
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -146,25 +146,25 @@ class PatientsManagementState extends State<PatientsManagement> {
                   ),
                 );
 
-                // Yeni hasta oluştur
+                
                 final newPatient = User(
-                  id: 0, // API tarafında otomatik atanacak
+                  id: 0, 
                   fullName: nameController.text,
                   email: emailController.text,
                   phoneNumber: phoneController.text,
                 );
 
-                // API'ye hasta ekleme isteği gönder
+                
                 final result = await _apiService.addUser(newPatient);
 
-                // Yükleniyor göstergesini kapat
+                
                 Navigator.pop(context);
 
-                // Dialog'u kapat
+                
                 Navigator.pop(context);
 
                 if (result['success']) {
-                  // Başarılı ise hastaları yeniden yükle
+                  
                   await _fetchPatients();
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -174,7 +174,7 @@ class PatientsManagementState extends State<PatientsManagement> {
                     ),
                   );
                 } else {
-                  // Hata durumunda
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(result['message']),
@@ -262,7 +262,7 @@ class PatientsManagementState extends State<PatientsManagement> {
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                // Yükleniyor göstergesi
+                
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -271,7 +271,7 @@ class PatientsManagementState extends State<PatientsManagement> {
                   ),
                 );
 
-                // Güncellenmiş hasta bilgileri
+                
                 final updatedPatient = User(
                   id: patient.id,
                   fullName: nameController.text,
@@ -279,17 +279,17 @@ class PatientsManagementState extends State<PatientsManagement> {
                   phoneNumber: phoneController.text,
                 );
 
-                // API'ye hasta güncelleme isteği gönder
+                
                 final result = await _apiService.updateUser(updatedPatient);
 
-                // Yükleniyor göstergesini kapat
+                
                 Navigator.pop(context);
 
-                // Dialog'u kapat
+                
                 Navigator.pop(context);
 
                 if (result['success']) {
-                  // Başarılı ise hastaları yeniden yükle
+                  
                   await _fetchPatients();
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -299,7 +299,7 @@ class PatientsManagementState extends State<PatientsManagement> {
                     ),
                   );
                 } else {
-                  // Hata durumunda
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(result['message']),
@@ -330,7 +330,7 @@ class PatientsManagementState extends State<PatientsManagement> {
           ),
           ElevatedButton(
             onPressed: () async {
-              // Yükleniyor göstergesi
+              
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -339,17 +339,17 @@ class PatientsManagementState extends State<PatientsManagement> {
                 ),
               );
 
-              // API'ye hasta silme isteği gönder
+              
               final result = await _apiService.deleteUser(patient.id);
 
-              // Yükleniyor göstergesini kapat
+              
               Navigator.pop(context);
 
-              // Dialog'u kapat
+              
               Navigator.pop(context);
 
               if (result['success']) {
-                // Başarılı ise hastaları yeniden yükle
+                
                 await _fetchPatients();
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -359,7 +359,7 @@ class PatientsManagementState extends State<PatientsManagement> {
                   ),
                 );
               } else {
-                // Hata durumunda
+                
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(result['message']),
@@ -391,7 +391,7 @@ class PatientsManagementState extends State<PatientsManagement> {
       ),
       body: Column(
         children: [
-          // Arama ve filtre çubuğu
+          
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -422,7 +422,7 @@ class PatientsManagementState extends State<PatientsManagement> {
             ),
           ),
 
-          // Hasta listesi
+          
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())

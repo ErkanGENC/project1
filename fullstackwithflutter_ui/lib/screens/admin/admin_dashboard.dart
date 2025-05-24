@@ -32,7 +32,7 @@ class AdminDashboardState extends State<AdminDashboard> {
     _checkAdminAccess();
   }
 
-  // Admin erişim kontrolü
+  
   Future<void> _checkAdminAccess() async {
     setState(() {
       _isLoading = true;
@@ -40,11 +40,11 @@ class AdminDashboardState extends State<AdminDashboard> {
     });
 
     try {
-      // Mevcut kullanıcıyı al
+      
       final currentUser = await _apiService.getCurrentUser();
 
       if (currentUser == null) {
-        // Kullanıcı oturum açmamış, giriş sayfasına yönlendir
+        
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/login');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,17 +57,17 @@ class AdminDashboardState extends State<AdminDashboard> {
         return;
       }
 
-      // Kullanıcı rolünü kontrol et
+      
       final userRole = currentUser.role.toLowerCase();
 
       if (userRole != 'admin') {
-        // Admin değilse, uygun sayfaya yönlendir
+        
         if (!mounted) return;
 
         String redirectRoute = '/';
         String message = 'Admin paneline erişim yetkiniz yok';
 
-        // Doktor kullanıcısı ise doktor paneline yönlendir
+        
         if (userRole == 'doctor') {
           redirectRoute = '/doctor/dashboard';
           message = 'Doktor paneline yönlendiriliyorsunuz';
@@ -84,12 +84,12 @@ class AdminDashboardState extends State<AdminDashboard> {
         return;
       }
 
-      // Admin kullanıcısı, verileri yükle
+      
       setState(() {
         _currentUser = currentUser;
       });
 
-      // Dashboard verilerini yükle
+      
       _loadDashboardData();
       _loadActivities();
     } catch (e) {
@@ -117,7 +117,7 @@ class AdminDashboardState extends State<AdminDashboard> {
     });
 
     try {
-      // API'den dashboard verilerini al
+      
       final dashboardData = await _apiService.getDashboardData();
 
       setState(() {
@@ -134,7 +134,7 @@ class AdminDashboardState extends State<AdminDashboard> {
 
   Future<void> _loadActivities() async {
     try {
-      // API'den aktivite verilerini al
+      
       final activities = await _apiService.getRecentActivities(10);
 
       setState(() {
@@ -154,7 +154,7 @@ class AdminDashboardState extends State<AdminDashboard> {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // Bildirimler sayfasına git
+              
             },
             tooltip: 'Bildirimler',
           ),
@@ -304,13 +304,13 @@ class AdminDashboardState extends State<AdminDashboard> {
               _showCreateAdminUserDialog();
             },
           ),
-          const SizedBox(height: 40), // Spacer yerine SizedBox kullanıldı
+          const SizedBox(height: 40), 
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Çıkış Yap', style: TextStyle(color: Colors.red)),
             onTap: () async {
-              // Çıkış işlemi
+              
               await _apiService.logout();
               if (!mounted) return;
               Navigator.of(context).pushReplacementNamed('/login');
@@ -322,7 +322,7 @@ class AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // Admin kullanıcısı oluşturma dialog'u
+  
   Future<void> _showCreateAdminUserDialog() async {
     bool isLoading = false;
     final TextEditingController emailController = TextEditingController();
@@ -424,14 +424,14 @@ class AdminDashboardState extends State<AdminDashboard> {
                   onPressed: isLoading
                       ? null
                       : () async {
-                          // Form doğrulama
+                          
                           if (formKey.currentState!.validate()) {
-                            // Yükleniyor durumunu güncelle
+                            
                             setState(() {
                               isLoading = true;
                             });
 
-                            // Admin kullanıcı verilerini hazırla
+                            
                             final adminData = {
                               'email': emailController.text,
                               'password': passwordController.text,
@@ -440,16 +440,16 @@ class AdminDashboardState extends State<AdminDashboard> {
                             };
 
                             try {
-                              // API isteğini yap
+                              
                               final result =
                                   await _apiService.createAdminUser(adminData);
 
-                              // Sonuç mesajını hazırla
+                              
                               final String message =
                                   result['message'] ?? 'İşlem tamamlandı';
                               final bool success = result['success'] ?? false;
 
-                              // Dialog'u kapat ve sonucu göster
+                              
                               if (dialogContext.mounted) {
                                 _showResultAndCloseDialog(
                                   dialogContext: dialogContext,
@@ -458,12 +458,12 @@ class AdminDashboardState extends State<AdminDashboard> {
                                 );
                               }
                             } catch (error) {
-                              // Yükleniyor durumunu güncelle
+                              
                               setState(() {
                                 isLoading = false;
                               });
 
-                              // Dialog'u kapat ve hatayı göster
+                              
                               if (dialogContext.mounted) {
                                 _showResultAndCloseDialog(
                                   dialogContext: dialogContext,
@@ -484,16 +484,16 @@ class AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // Dialog'u kapat ve sonucu göster
+  
   void _showResultAndCloseDialog({
     required BuildContext dialogContext,
     required String message,
     required bool success,
   }) {
-    // Dialog'u kapat
+    
     Navigator.of(dialogContext).pop();
 
-    // Sonucu göster
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -525,7 +525,7 @@ class AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 24),
 
-          // İstatistik Kartları
+          
           Row(
             children: [
               Expanded(
@@ -589,7 +589,7 @@ class AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 16),
 
-          // Hızlı Erişim Kartları
+          
           Row(
             children: [
               Expanded(
@@ -667,7 +667,7 @@ class AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 16),
 
-          // Son Aktiviteler
+          
           RecentActivityCard(activities: _activities),
         ],
       ),

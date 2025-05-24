@@ -12,11 +12,13 @@ namespace FullstackWithFlutter.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
+        private readonly IWebHostEnvironment _environment;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, IWebHostEnvironment environment)
         {
             _authService = authService;
             _logger = logger;
+            _environment = environment;
         }
 
         [HttpPost("Register")]
@@ -241,8 +243,11 @@ namespace FullstackWithFlutter.Controllers
                     });
                 }
 
-                _logger.LogInformation("Calling AuthService.SendPasswordResetEmail for email: {Email}", model.Email);
-                var result = await _authService.SendPasswordResetEmail(model.Email);
+                // IP adresini al
+                var clientIp = GetClientIpAddress();
+
+                _logger.LogInformation("Calling AuthService.SendPasswordResetEmail for email: {Email}, IP: {IP}", model.Email, clientIp);
+                var result = await _authService.SendPasswordResetEmail(model.Email, clientIp);
 
                 _logger.LogInformation("AuthService.SendPasswordResetEmail result: Status={Status}, Message={Message}",
                     result.Status, result.Message);
@@ -286,6 +291,34 @@ namespace FullstackWithFlutter.Controllers
             catch
             {
                 return false;
+            }
+        }
+
+        // IP adresini alma
+        private string GetClientIpAddress()
+        {
+            try
+            {
+                // X-Forwarded-For header'ını kontrol et (proxy/load balancer arkasında)
+                var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(forwardedFor))
+                {
+                    return forwardedFor.Split(',')[0].Trim();
+                }
+
+                // X-Real-IP header'ını kontrol et
+                var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(realIp))
+                {
+                    return realIp;
+                }
+
+                // RemoteIpAddress'i kullan
+                return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            }
+            catch
+            {
+                return "unknown";
             }
         }
 
@@ -474,6 +507,33 @@ namespace FullstackWithFlutter.Controllers
                 {
                     Status = false,
                     Message = "İlk admin kullanıcısı oluşturulurken bir hata oluştu: " + ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        // SADECE GELİŞTİRME İÇİN: Aktif doğrulama kodlarını listele
+        [HttpGet("GetActiveResetCodes")]
+        public async Task<IActionResult> GetActiveResetCodes()
+        {
+            try
+            {
+                // Sadece development ortamında çalışsın
+                if (!_environment.IsDevelopment())
+                {
+                    return NotFound();
+                }
+
+                var result = await _authService.GetActiveResetCodes();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active reset codes");
+                return BadRequest(new ApiResponse
+                {
+                    Status = false,
+                    Message = "Aktif kodlar alınırken hata oluştu: " + ex.Message,
                     Data = null
                 });
             }

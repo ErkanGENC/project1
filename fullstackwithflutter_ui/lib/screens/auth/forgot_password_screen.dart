@@ -4,7 +4,6 @@ import '../../constants/app_theme.dart';
 import '../../routes/app_routes.dart';
 import '../../services/api_service.dart';
 
-/// Şifre sıfırlama ekranı
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -20,8 +19,7 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _resetCodeController = TextEditingController();
   final _apiService = ApiService();
   bool _isLoading = false;
-  bool _isResendLoading =
-      false; // Tekrar gönderme işlemi için yükleniyor durumu
+  bool _isResendLoading = false;
   bool _isEmailSent = false;
   bool _isCodeVerified = false;
   bool _isResetComplete = false;
@@ -29,17 +27,11 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isConfirmPasswordVisible = false;
   String _errorMessage = '';
 
-  // Şifre sıfırlama aşamaları
-  // 1: E-posta girişi
-  // 2: Kod doğrulama
-  // 3: Yeni şifre belirleme
   int _currentStep = 1;
 
-  // Tekrar gönderme için zamanlayıcı
   int _resendCountdown = 0;
   Timer? _resendTimer;
 
-  // Doğrulama kodu (geliştirme ortamında kullanılır)
   String? _debugResetCode;
 
   @override
@@ -53,13 +45,12 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _resetCodeController.dispose();
-    _resendTimer?.cancel(); // Zamanlayıcıyı iptal et
+    _resendTimer?.cancel();
     super.dispose();
   }
 
-  // Tekrar gönderme zamanlayıcısını başlat
   void _startResendTimer() {
-    _resendCountdown = 30; // 60 saniye bekletme süresi
+    _resendCountdown = 30;
     _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
@@ -72,7 +63,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
   }
 
-  // Doğrulama kodunu tekrar gönder
   Future<void> _resendResetCode() async {
     if (_isResendLoading) return;
 
@@ -82,7 +72,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      // API isteği
       final email = _emailController.text.trim();
       final result = await _apiService.sendPasswordResetEmail(email);
 
@@ -93,11 +82,8 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result['success']) {
-        // Başarılı kod gönderimi
-        // Tekrar gönderme zamanlayıcısını başlat
         _startResendTimer();
 
-        // Geliştirme ortamında, doğrulama kodunu mesajdan çıkar
         if (result['message'] != null &&
             result['message'].toString().contains('DOĞRULAMA KODU:')) {
           final String message = result['message'].toString();
@@ -110,7 +96,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           }
         }
 
-        // Başarı mesajını göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -119,7 +104,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         );
       } else {
-        // Hata durumu
         _errorMessage = result['message'] ??
             'Şifre sıfırlama kodu gönderilirken bir hata oluştu';
         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,24 +130,18 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // Şifre güvenlik kontrolü
   bool _isPasswordStrong(String password) {
-    // En az 8 karakter
     if (password.length < 8) return false;
 
-    // En az bir büyük harf
     if (!password.contains(RegExp(r'[A-Z]'))) return false;
 
-    // En az bir küçük harf
     if (!password.contains(RegExp(r'[a-z]'))) return false;
 
-    // En az bir rakam
     if (!password.contains(RegExp(r'[0-9]'))) return false;
 
     return true;
   }
 
-  // E-posta kontrolü ve sıfırlama kodu gönderme
   Future<void> _sendResetCode() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -175,7 +153,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      // API isteği
       final email = _emailController.text.trim();
       final result = await _apiService.sendPasswordResetEmail(email);
 
@@ -186,16 +163,13 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result['success']) {
-        // Başarılı kod gönderimi
         setState(() {
           _isEmailSent = true;
-          _currentStep = 2; // Kod doğrulama aşamasına geç
+          _currentStep = 2;
         });
 
-        // Tekrar gönderme zamanlayıcısını başlat
         _startResendTimer();
 
-        // Geliştirme ortamında, doğrulama kodunu mesajdan çıkar
         if (result['message'] != null &&
             result['message'].toString().contains('DOĞRULAMA KODU:')) {
           final String message = result['message'].toString();
@@ -208,7 +182,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           }
         }
 
-        // Başarı mesajını göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ??
@@ -217,7 +190,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         );
       } else {
-        // Hata durumu
         _errorMessage = result['message'] ??
             'Şifre sıfırlama kodu gönderilirken bir hata oluştu';
         ScaffoldMessenger.of(context).showSnackBar(
@@ -244,7 +216,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // Sıfırlama kodunu doğrulama
   Future<void> _verifyResetCode() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -256,7 +227,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      // API isteği
       final email = _emailController.text.trim();
       final resetCode = _resetCodeController.text.trim();
 
@@ -269,13 +239,11 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result['success']) {
-        // Başarılı kod doğrulama
         setState(() {
           _isCodeVerified = true;
-          _currentStep = 3; // Yeni şifre belirleme aşamasına geç
+          _currentStep = 3;
         });
 
-        // Başarı mesajını göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ??
@@ -284,7 +252,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         );
       } else {
-        // Hata durumu
         _errorMessage =
             result['message'] ?? 'Kod doğrulanırken bir hata oluştu';
         ScaffoldMessenger.of(context).showSnackBar(
@@ -311,7 +278,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // Şifre sıfırlama
   Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -323,7 +289,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      // API isteği
       final email = _emailController.text.trim();
       final resetCode = _resetCodeController.text.trim();
       final newPassword = _passwordController.text;
@@ -341,12 +306,10 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result['success']) {
-        // Başarılı sıfırlama
         setState(() {
           _isResetComplete = true;
         });
 
-        // Başarı mesajını göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Şifre başarıyla sıfırlandı'),
@@ -354,7 +317,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         );
       } else {
-        // Hata durumu
         _errorMessage =
             result['message'] ?? 'Şifre sıfırlama sırasında bir hata oluştu';
         ScaffoldMessenger.of(context).showSnackBar(
@@ -406,7 +368,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // İkon ve başlık
           const Icon(
             Icons.lock_reset,
             size: 80,
@@ -419,8 +380,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-
-          // Aşamaya göre açıklama metni
           Text(
             _currentStep == 1
                 ? 'Endişelenmeyin! Kayıtlı e-posta adresinizi girin ve size şifre sıfırlama kodu gönderelim.'
@@ -431,8 +390,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-
-          // Aşama 1: E-posta girişi
           if (_currentStep == 1) ...[
             TextFormField(
               controller: _emailController,
@@ -455,10 +412,7 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               },
             ),
           ],
-
-          // Aşama 2: Kod doğrulama
           if (_currentStep == 2) ...[
-            // E-posta (salt okunur)
             TextFormField(
               controller: _emailController,
               enabled: false,
@@ -469,8 +423,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Doğrulama kodu girişi
             TextFormField(
               controller: _resetCodeController,
               keyboardType: TextInputType.number,
@@ -480,7 +432,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 hintText: '123456',
                 prefixIcon: const Icon(Icons.pin_outlined),
                 border: const OutlineInputBorder(),
-                // Geliştirme ortamında doğrulama kodunu göster
                 helperText: _debugResetCode != null
                     ? 'Geliştirme modu: Kod: $_debugResetCode'
                     : null,
@@ -499,13 +450,11 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 return null;
               },
             ),
-
-            // Tekrar gönder butonu
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: _resendCountdown > 0 || _isResendLoading
-                    ? null // Zamanlayıcı aktifse veya yükleniyor durumundaysa devre dışı bırak
+                    ? null
                     : _resendResetCode,
                 icon: _isResendLoading
                     ? const SizedBox(
@@ -534,10 +483,7 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
           ],
-
-          // Aşama 3: Yeni şifre belirleme
           if (_currentStep == 3) ...[
-            // E-posta (salt okunur)
             TextFormField(
               controller: _emailController,
               enabled: false,
@@ -548,8 +494,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Doğrulama kodu (salt okunur)
             TextFormField(
               controller: _resetCodeController,
               enabled: false,
@@ -560,8 +504,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Yeni şifre alanı
             TextFormField(
               controller: _passwordController,
               obscureText: !_isPasswordVisible,
@@ -594,8 +536,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Şifre tekrar alanı
             TextFormField(
               controller: _confirmPasswordController,
               obscureText: !_isConfirmPasswordVisible,
@@ -629,8 +569,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ],
           const SizedBox(height: 24),
-
-          // İşlem butonu (aşamaya göre değişir)
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : ElevatedButton(
@@ -656,8 +594,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                 ),
           const SizedBox(height: 16),
-
-          // Giriş sayfasına dön
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -674,7 +610,6 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Başarılı ikonu
         const Icon(
           Icons.check_circle_outline,
           size: 80,

@@ -12,11 +12,14 @@ namespace FullstackWithFlutter.Services.Interfaces
         Task<ApiResponse> ResetPassword(string email, string newPassword);
 
         // Yeni eklenen metodlar
-        Task<ApiResponse> SendPasswordResetEmail(string email);
+        Task<ApiResponse> SendPasswordResetEmail(string email, string ipAddress = "unknown");
         Task<ApiResponse> VerifyResetCode(string email, string resetCode);
         Task<ApiResponse> ResetPasswordWithToken(string email, string resetCode, string newPassword);
 
         // Rol bazlı kullanıcı sorgulama
         Task<List<AppUserViewModel>> GetUsersByRole(string role);
+
+        // Geliştirme için
+        Task<ApiResponse> GetActiveResetCodes();
     }
 }

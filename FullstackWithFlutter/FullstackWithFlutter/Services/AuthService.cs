@@ -18,14 +18,16 @@ namespace FullstackWithFlutter.Services
         private readonly IEmailService _emailService;
         private readonly ILogger<AuthService> _logger;
         private readonly IActivityService _activityService;
+        private readonly ISecurityService _securityService;
 
-        public AuthService(IUnitofWork unitofWork, IMapper mapper, IEmailService emailService, ILogger<AuthService> logger, IActivityService activityService)
+        public AuthService(IUnitofWork unitofWork, IMapper mapper, IEmailService emailService, ILogger<AuthService> logger, IActivityService activityService, ISecurityService securityService)
         {
             _unitofWork = unitofWork;
             _mapper = mapper;
             _emailService = emailService;
             _logger = logger;
             _activityService = activityService;
+            _securityService = securityService;
         }
 
         public async Task<ApiResponse> Login(LoginViewModel loginViewModel)
@@ -493,16 +495,45 @@ namespace FullstackWithFlutter.Services
         }
 
         // Şifre sıfırlama e-postası gönder
-        public async Task<ApiResponse> SendPasswordResetEmail(string email)
+        public async Task<ApiResponse> SendPasswordResetEmail(string email, string ipAddress = "unknown")
         {
             try
             {
+                // Güvenlik kontrolü - Rate limiting
+                var isRateLimited = await _securityService.IsRateLimitExceeded(email, ipAddress, "SendCode");
+                if (isRateLimited)
+                {
+                    await _securityService.LogAttempt(email, ipAddress, "SendCode", false);
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Çok fazla deneme yaptınız. Lütfen daha sonra tekrar deneyin.",
+                        Data = null
+                    };
+                }
+
+                // E-posta ve IP blok kontrolü
+                var isEmailBlocked = await _securityService.IsEmailBlocked(email);
+                var isIpBlocked = await _securityService.IsIpBlocked(ipAddress);
+
+                if (isEmailBlocked || isIpBlocked)
+                {
+                    await _securityService.LogAttempt(email, ipAddress, "SendCode", false);
+                    return new ApiResponse
+                    {
+                        Status = false,
+                        Message = "Bu e-posta adresi veya IP adresi geçici olarak engellenmiştir.",
+                        Data = null
+                    };
+                }
+
                 // Kullanıcıyı email'e göre bul
                 var users = await _unitofWork.AppUsers.Find(u => u.Email == email);
                 var user = users.FirstOrDefault();
 
                 if (user == null)
                 {
+                    await _securityService.LogAttempt(email, ipAddress, "SendCode", false);
                     return new ApiResponse
                     {
                         Status = false,
@@ -548,31 +579,51 @@ namespace FullstackWithFlutter.Services
                 }
 
                 // E-posta gönder
-                var subject = "Şifre Sıfırlama Kodu";
+                var subject = "Ağız ve Diş Sağlığı Takip - Şifre Sıfırlama Kodu";
                 var body = $@"
                 <html>
                 <head>
                     <style>
-                        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
-                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                        .header {{ background-color: #4CAF50; color: white; padding: 10px; text-align: center; }}
-                        .content {{ padding: 20px; border: 1px solid #ddd; }}
-                        .code {{ font-size: 24px; font-weight: bold; text-align: center; margin: 20px 0; color: #4CAF50; }}
-                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #777; }}
+                        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
+                        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .header h1 {{ margin: 0; font-size: 24px; }}
+                        .header .icon {{ font-size: 48px; margin-bottom: 10px; }}
+                        .content {{ padding: 30px; }}
+                        .greeting {{ font-size: 18px; color: #333; margin-bottom: 20px; }}
+                        .message {{ font-size: 16px; color: #555; margin-bottom: 30px; }}
+                        .code-container {{ background-color: #f8f9fa; border: 2px dashed #667eea; border-radius: 10px; padding: 20px; text-align: center; margin: 30px 0; }}
+                        .code {{ font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px; font-family: 'Courier New', monospace; }}
+                        .code-label {{ font-size: 14px; color: #666; margin-bottom: 10px; }}
+                        .warning {{ background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0; color: #856404; }}
+                        .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #777; }}
+                        .footer .company {{ font-weight: bold; color: #667eea; }}
                     </style>
                 </head>
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h2>Şifre Sıfırlama</h2>
+                            <div class='icon'>🦷</div>
+                            <h1>Ağız ve Diş Sağlığı Takip Sistemi</h1>
                         </div>
                         <div class='content'>
-                            <p>Merhaba {user.FullName},</p>
-                            <p>Şifre sıfırlama talebiniz için onay kodunuz aşağıdadır:</p>
-                            <div class='code'>{resetCode}</div>
-                            <p>Bu kod 1 saat boyunca geçerlidir. Eğer bu talebi siz yapmadıysanız, lütfen bu e-postayı dikkate almayınız.</p>
+                            <div class='greeting'>Merhaba {user.FullName},</div>
+                            <div class='message'>
+                                Şifre sıfırlama talebiniz alınmıştır. Aşağıdaki 6 haneli doğrulama kodunu kullanarak şifrenizi sıfırlayabilirsiniz:
+                            </div>
+                            <div class='code-container'>
+                                <div class='code-label'>Doğrulama Kodunuz:</div>
+                                <div class='code'>{resetCode}</div>
+                            </div>
+                            <div class='warning'>
+                                <strong>⚠️ Güvenlik Uyarısı:</strong><br>
+                                • Bu kod 1 saat boyunca geçerlidir<br>
+                                • Kodu kimseyle paylaşmayınız<br>
+                                • Eğer bu talebi siz yapmadıysanız, lütfen bu e-postayı dikkate almayınız
+                            </div>
                         </div>
                         <div class='footer'>
+                            <div class='company'>Ağız ve Diş Sağlığı Takip Sistemi</div>
                             <p>Bu e-posta otomatik olarak gönderilmiştir, lütfen yanıtlamayınız.</p>
                         </div>
                     </div>
@@ -616,6 +667,9 @@ namespace FullstackWithFlutter.Services
                         Data = null
                     };
                 }
+
+                // Başarılı işlem kaydı
+                await _securityService.LogAttempt(email, ipAddress, "SendCode", true);
 
                 return new ApiResponse
                 {
@@ -774,6 +828,41 @@ namespace FullstackWithFlutter.Services
             {
                 _logger.LogError(ex, "Error getting users by role: {Role}", role);
                 return new List<AppUserViewModel>();
+            }
+        }
+
+        // SADECE GELİŞTİRME İÇİN: Aktif doğrulama kodlarını getir
+        public async Task<ApiResponse> GetActiveResetCodes()
+        {
+            try
+            {
+                var activeTokens = await _unitofWork.PasswordResetTokens.Find(t =>
+                    !t.IsUsed && t.ExpiryDate > DateTime.Now);
+
+                var tokenList = activeTokens.Select(t => new
+                {
+                    Email = t.Email,
+                    Token = t.Token,
+                    CreatedDate = t.CreatedDate,
+                    ExpiryDate = t.ExpiryDate
+                }).OrderByDescending(t => t.CreatedDate).ToList();
+
+                return new ApiResponse
+                {
+                    Status = true,
+                    Message = $"{tokenList.Count} aktif doğrulama kodu bulundu.",
+                    Data = tokenList
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active reset codes");
+                return new ApiResponse
+                {
+                    Status = false,
+                    Message = "Aktif kodlar alınırken hata oluştu: " + ex.Message,
+                    Data = null
+                };
             }
         }
     }

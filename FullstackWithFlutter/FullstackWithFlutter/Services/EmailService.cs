@@ -31,8 +31,8 @@ namespace FullstackWithFlutter.Services
                 var senderEmail = _configuration["EmailSettings:SenderEmail"];
                 var sendRealEmailsStr = _configuration["EmailSettings:SendRealEmails"];
 
-                // Ayarları logla
-                _logger.LogInformation($"SMTP Ayarları: Server={smtpServer}, Port={portStr}, EnableSsl={enableSslStr}, Username={username}, SenderEmail={senderEmail}, SendRealEmails={sendRealEmailsStr}");
+                // Ayarları logla (şifre hariç)
+                _logger.LogInformation($"SMTP Ayarları - Server: {smtpServer}, Port: {portStr}, SSL: {enableSslStr}, Username: {username}, SenderEmail: {senderEmail}, SendRealEmails: {sendRealEmailsStr}");
 
                 // Ayarları doğrula
                 if (string.IsNullOrEmpty(smtpServer) || string.IsNullOrEmpty(portStr) ||
@@ -57,11 +57,15 @@ namespace FullstackWithFlutter.Services
                 }
 
                 // SendRealEmails ayarını parse et
-                bool sendRealEmails = false;
+                bool sendRealEmails = true; // Varsayılan olarak true yap
                 if (!string.IsNullOrEmpty(sendRealEmailsStr))
                 {
-                    bool.TryParse(sendRealEmailsStr, out sendRealEmails);
+                    // Farklı string değerlerini kontrol et
+                    var lowerValue = sendRealEmailsStr.ToLower().Trim();
+                    sendRealEmails = lowerValue == "true" || lowerValue == "1" || lowerValue == "yes";
                 }
+
+                _logger.LogInformation($"SendRealEmails ayarı: '{sendRealEmailsStr}' -> {sendRealEmails}");
 
                 try
                 {

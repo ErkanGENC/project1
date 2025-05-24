@@ -18,6 +18,7 @@ namespace FullstackWithFlutter.Infrastructure
         public DbSet<Doctor> doctors { get; set; }
         public DbSet<Appointment> appointments { get; set; }
         public DbSet<PasswordResetToken> passwordResetTokens { get; set; }
+        public DbSet<PasswordResetAttempt> passwordResetAttempts { get; set; }
         public DbSet<Activity> activities { get; set; }
         public DbSet<DentalTracking> dentalTrackings { get; set; }
         public DbSet<UserSettings> userSettings { get; set; }
@@ -35,6 +36,17 @@ namespace FullstackWithFlutter.Infrastructure
                 entity.Property(e => e.ExpiryDate).IsRequired();
                 entity.Property(e => e.IsUsed).IsRequired();
                 entity.Property(e => e.CreatedDate).IsRequired();
+            });
+
+            // PasswordResetAttempt tablosu için konfigürasyon
+            modelBuilder.Entity<PasswordResetAttempt>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45); // IPv6 için yeterli
+                entity.Property(e => e.AttemptTime).IsRequired();
+                entity.Property(e => e.IsSuccessful).IsRequired();
+                entity.Property(e => e.AttemptType).IsRequired().HasMaxLength(20);
             });
         }
     }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'constants/app_theme.dart';
 import 'routes/app_routes.dart';
 import 'services/api_service.dart';
 import 'services/theme_service.dart';
@@ -10,7 +9,7 @@ void main() {
 
   ApiService.configurePlatformSpecificUrl();
 
-  print('API URL: ${ApiService.baseUrl}');
+  // Debug: API URL: ${ApiService.baseUrl}
 
   final themeService = ThemeService();
   themeService.loadSettings();
